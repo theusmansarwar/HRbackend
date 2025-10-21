@@ -16,7 +16,9 @@ const trainingRouter = require('./Routes/trainingRouter');
 const userRouter = require('./Routes/userRouter');
 const roleRouter = require('./Routes/rolesRouter');
 
-const port=5000;
+const port = process.env.PORT || 5009;
+
+ 
 app.use(express.json());
 app.use(cors({
   origin: "http://localhost:3000", 
@@ -36,8 +38,9 @@ app.use("/training", trainingRouter);
 app.use("/users", userRouter);
 app.use("/roles", roleRouter);
 app.use("/fines", require("./Routes/fineRouter"));
-connectDB().then(()=>{
-    app.listen(port,()=>{
-        console.log("Server is running on Port: ", port)
-    })
-})
+ 
+connectDB().then(() => {
+  app.listen(port, () => {
+    console.log(`Server is running on Port: ${port}`);
+  });
+});
