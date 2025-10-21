@@ -18,6 +18,4 @@ router.delete("/deleteRole/:id", protect, verifyRole(["Admin"]), rolesController
 // router.get("/getRoleByName/:name", protect, verifyRole(["Admin"]), rolesController.getRoleByName);
 router.get("/getRoleByName/:name", rolesController.getRoleByName);
 
-
-
 module.exports = router;
