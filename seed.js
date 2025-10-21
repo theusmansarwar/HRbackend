@@ -20,36 +20,36 @@ async function seed() {
 
   try {
     // --- Create Admin Role ---
-    const adminRoleExists = await Role.findOne({ name: "Admin" });
+    const adminRoleExists = await Role.findOne({ name: "HR" });
     if (!adminRoleExists) {
       await Role.create({
-        name: "Admin",
+        name: "HR",
         modules: [
-          "Dashboard","Departments","Designations","Employees","Attendance","Leaves",
+          "Dashboard","Roles","Users", "Departments","Designations","Employees","Attendance","Leaves",
           "Performance","Training","Payroll","Fines","Jobs","Applications","Reports"
         ],
-        description: "Full access Admin role",
+        description: "Full access HR role",
         status: "active"
       });
-      console.log("✅ Admin role created");
+      console.log("✅ HR role created");
     } else {
-      console.log("ℹ️ Admin role already exists");
+      console.log("ℹ️ HR role already exists");
     }
 
     // --- Create Admin User ---
-    const adminUserExists = await User.findOne({ email: "admin@example.com" });
+    const adminUserExists = await User.findOne({ email: "HR@example.com" });
     if (!adminUserExists) {
-      const hashedPassword = await bcrypt.hash("Admin@1234", 10);
+      const hashedPassword = await bcrypt.hash("HR@1234", 10);
       await User.create({
-        name: "Super Admin",
-        email: "admin@example.com",
+        name: "Super HR",
+        email: "HR@example.com",
         password: hashedPassword,
-        role: "Admin",
+        role: "HR",
         status: "active"
       });
-      console.log("✅ Admin user created");
+      console.log("✅ HR user created");
     } else {
-      console.log("ℹ️ Admin user already exists");
+      console.log("ℹ️ HRnnb user already exists");
     }
 
     console.log("🌱 Seeding complete!");

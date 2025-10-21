@@ -22,4 +22,5 @@ router.put("/:id", protect, verifyRole(["Admin", "HR"]), usersController.updateU
 // Admin deletes user
 router.delete("/:id", protect, verifyRole(["Admin"]), usersController.deleteUser);
 
+
 module.exports = router;

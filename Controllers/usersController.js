@@ -1,23 +1,43 @@
 const User = require("../Models/User.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const Role = require("../Models/Roles"); // 👈 make sure this is imported at top
 
 // LOGIN
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // 🔹 Find user
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid Credentials" });
-    if (user.status === "inactive") return res.status(403).json({ message: "User inactive" });
+    if (user.status === "inactive")
+      return res.status(403).json({ message: "User inactive" });
 
+    // 🔹 Compare password
     const validPass = await bcrypt.compare(password, user.password);
-    if (!validPass) return res.status(400).json({ message: "Invalid Credentials" });
+    if (!validPass)
+      return res.status(400).json({ message: "Invalid Credentials" });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    // 🔹 Fetch assigned role and its modules
+    const roleData = await Role.findOne({ name: user.role }); // <-- role model se modules lao
 
+    // 🔹 Create JWT
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    // 🔹 Send response including modules
     res.json({
       message: "Login successful",
-      user: { name: user.name, email: user.email, role: user.role },
+      user: {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        modules: roleData ? roleData.modules : [], // 👈 yahan modules array bhejna zaruri hai
+      },
       token,
     });
   } catch (err) {
@@ -25,6 +45,7 @@ const loginUser = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // SIGNUP
 const signupUser = async (req, res) => {

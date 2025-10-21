@@ -76,10 +76,21 @@ const deleteRole = async (req, res) => {
   }
 };
 
+const getRoleByName = async (req, res) => {
+  try {
+    const role = await Role.findOne({ name: req.params.name });
+    if (!role) return res.status(404).json({ message: "Role not found" });
+    res.json(role);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createRole,
   getAllRoles,
   getRoleById,
   updateRole,
   deleteRole,
+  getRoleByName,
 };
