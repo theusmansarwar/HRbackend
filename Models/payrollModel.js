@@ -1,7 +1,13 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const payrollSchema = new mongoose.Schema(
   {
+    payrollId: {
+      type: String,
+      unique: true, 
+      uppercase: true,
+      trim: true,
+    },
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",
@@ -39,8 +45,8 @@ const payrollSchema = new mongoose.Schema(
     },
     paymentDate: {
       type: Date,
-      required: true,
       default: Date.now,
+      required: true,
     },
     paymentMethod: {
       type: String,
@@ -50,6 +56,7 @@ const payrollSchema = new mongoose.Schema(
     month: {
       type: String,
       required: true,
+      trim: true,
     },
     year: {
       type: Number,
@@ -62,13 +69,11 @@ const payrollSchema = new mongoose.Schema(
       required: true,
     },
     isArchived: {
-      type: String,
-      enum: ["Yes", "No"],
-      default: "No",
+      type: Boolean,
+      default: false, 
     },
   },
   { timestamps: true }
 );
 
-const Payroll = mongoose.model("Payroll", payrollSchema);
-module.exports = Payroll;
+export default mongoose.model("Payroll", payrollSchema);

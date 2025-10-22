@@ -1,17 +1,22 @@
-const mongoose = require("mongoose");
+// models/Performance.js
+import mongoose from "mongoose";
 
 const performanceSchema = new mongoose.Schema(
   {
+    performanceId: {
+      type: String,
+      unique: true, // optional: you can generate unique IDs like PERF-0001
+    },
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",
       required: true,
     },
     KPIs: {
-  type: [String],
-  required: true,
-},
-
+      type: [String],
+      required: true,
+      default: [],
+    },
     appraisalDate: {
       type: Date,
       required: true,
@@ -21,20 +26,24 @@ const performanceSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
-      max: 100, 
+      max: 100,
     },
     remarks: {
       type: String,
       trim: true,
     },
+    reviewerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Employee", 
+    },
     status: {
       type: String,
-      enum: ["Archived", "Not Archived"],
+      enum: ["Not Archived", "Archived"],
       default: "Not Archived",
+      required: true,
     },
   },
   { timestamps: true }
 );
 
-const Performance = mongoose.model("Performance", performanceSchema);
-module.exports = Performance;
+export default mongoose.model("Performance", performanceSchema);

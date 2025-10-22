@@ -1,39 +1,17 @@
-const mongoose = require("mongoose");
+ import mongoose from "mongoose";
 
 const trainingSchema = new mongoose.Schema(
   {
-    employeeId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Employee",
-      required: true,
-    },
-    trainingName: {
-      type: String,
-      required: true,
-    },
-    startDate: {
-      type: Date,
-      required: true,
-    },
-    endDate: {
-      type: Date,
-      required: true,
-    },
-    certificate: {
-      type: String, 
-      default: null,
-    },
-    status: {
-      type: String,
-      enum: ["Pending", "In Progress", "Completed"],
-      default: "Pending",
-    },
-    archive: {
-      type: Boolean,
-      default: false,
-    },
+    trainingId: { type: String, unique: true, required: true },
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: "Employee", required: true },
+    trainingName: { type: String, required: true },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+    certificate: { type: String },
+    status: { type: String, enum: ["In Progress", "Pending", "Completed"], default: "In Progress" },
+    isArchived: { type: Boolean, default: false }, 
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Training", trainingSchema);
+export default mongoose.model("Training", trainingSchema);

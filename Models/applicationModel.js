@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const applicationSchema = new mongoose.Schema(
   {
+    applicationId: {
+      type: String,
+      unique: true,
+      required: true, 
+    },
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Job",

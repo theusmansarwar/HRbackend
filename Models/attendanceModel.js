@@ -1,15 +1,17 @@
-const mongoose = require("mongoose");
+// models/Attendance.js
+import mongoose from "mongoose";
 
 const attendanceSchema = new mongoose.Schema(
   {
+    attendanceId: {
+      type: String,
+      unique: true,
+      trim: true,
+    },
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",
       required: true,
-    },
-    isArchived: {
-      type: Boolean,
-      default: false,
     },
     date: {
       type: Date,
@@ -19,25 +21,31 @@ const attendanceSchema = new mongoose.Schema(
       type: String,
       enum: ["Present", "Absent", "Leave", "Late", "Half Day"],
       required: true,
+      default: "Present",
     },
     checkInTime: {
-      type: String, // "09:00"
+      type: String, // e.g., "09:00"
       required: true,
     },
     checkOutTime: {
-      type: String, // "18:00"
+      type: String, // e.g., "18:00"
       required: true,
     },
     shiftName: {
       type: String,
       required: true,
+      trim: true,
     },
     overtimeHours: {
       type: Number,
       default: 0,
     },
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Attendance", attendanceSchema);
+export default mongoose.model("Attendance", attendanceSchema);

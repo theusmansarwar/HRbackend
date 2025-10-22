@@ -1,7 +1,11 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const leaveSchema = new mongoose.Schema(
   {
+    leaveId: { 
+      type: String, 
+      unique: true 
+    },
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",
@@ -24,13 +28,23 @@ const leaveSchema = new mongoose.Schema(
       type: String,
       enum: ["Pending", "Approved", "Rejected"],
       default: "Pending",
+      required: true,
     },
-    archive: {
+    isArchived: {
       type: Boolean,
       default: false,
+    },
+    reason: { 
+      type: String, 
+      trim: true, 
+      default: "" 
+    },
+    attachmentLinks: { 
+      type: [String], 
+      default: [] 
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Leave", leaveSchema);
+export default mongoose.model("Leave", leaveSchema);

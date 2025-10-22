@@ -1,27 +1,34 @@
-const Fine = require("../Models/fineModel");
-const Employee = require("../Models/employeeModel");
+import Fine from "../Models/fineModel.js";
+import Employee from "../Models/employeeModel.js";
 
-// ✅ CREATE FINE
-const createFine = async (req, res) => {
-  const { fineId, employeeId, fineType, fineAmount, fineDate, description, status, archiveFine } = req.body;
-
-  // Validation
-  if (!fineId) return res.json({ error: "Fine ID is required" });
-  if (!employeeId) return res.json({ error: "Employee ID is required" });
-  if (!fineType) return res.json({ error: "Fine Type is required" });
-  if (fineAmount === undefined || fineAmount === null) return res.json({ error: "Fine Amount is required" });
-
+// =============================
+// CREATE FINE (Auto Increment ID)
+// =============================
+export const createFine = async (req, res) => {
   try {
-    // Check if employee exists
-    const employeeExists = await Employee.findById(employeeId);
-    if (!employeeExists) return res.json({ error: "Employee not found" });
+    const {
+      employeeId,
+      fineType,
+      fineAmount,
+      fineDate,
+      description,
+      status,
+    } = req.body;
 
-    // Check if fine already exists
-    const exists = await Fine.findOne({ fineId });
-    if (exists) return res.json({ error: "Fine with this ID already exists!" });
+    const lastFine = await Fine.findOne().sort({ createdAt: -1 });
+    let newIdNumber = 1;
 
-    // Create fine record
-    const fine = await Fine.create({
+    if (lastFine && lastFine.fineId) {
+      const lastNumber = parseInt(lastFine.fineId.split("-")[1]);
+      if (!isNaN(lastNumber)) {
+        newIdNumber = lastNumber + 1;
+      }
+    }
+    
+
+    const fineId = `FINE-${newIdNumber.toString().padStart(4, "0")}`;
+
+    const fine = new Fine({
       fineId,
       employeeId,
       fineType,
@@ -29,85 +36,97 @@ const createFine = async (req, res) => {
       fineDate,
       description,
       status,
-      archiveFine,
     });
 
-    return res.status(200).json({
-      message: "Fine record created successfully",
+    await fine.save();
+
+    return res.status(201).json({
+      message: "Fine created successfully",
       data: fine,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error", details: error.message });
+    console.error("Error creating fine:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
-
-// ✅ GET ALL FINES (non-archived)
-const getFineList = async (req, res) => {
+// =============================
+// GET ALL ACTIVE FINES
+// =============================
+export const getFineList = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
     const filter = { archiveFine: false };
 
     const fines = await Fine.find(filter)
       .populate("employeeId", "firstName lastName email")
       .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip((page - 1) * limit);
+      .skip(parseInt(skip))
+      .limit(parseInt(limit));
 
-    const totalFines = await Fine.countDocuments(filter);
+    const total = await Fine.countDocuments(filter);
 
     return res.status(200).json({
-      message: "Fine list fetched successfully",
-      totalFines,
-      totalPages: Math.ceil(totalFines / limit),
-      currentPage: page,
-      limit,
+      message: "Active fines fetched successfully",
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
       data: fines,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error", details: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ✅ GET ARCHIVED FINES
-const getArchivedFines = async (req, res) => {
+// =============================
+// GET ARCHIVED FINES
+// =============================
+export const getArchivedFines = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
     const filter = { archiveFine: true };
 
     const archived = await Fine.find(filter)
       .populate("employeeId", "firstName lastName email")
       .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip((page - 1) * limit);
+      .skip(parseInt(skip))
+      .limit(parseInt(limit));
 
-    const totalArchived = await Fine.countDocuments(filter);
+    const total = await Fine.countDocuments(filter);
 
     return res.status(200).json({
       message: "Archived fines fetched successfully",
-      totalArchived,
-      totalPages: Math.ceil(totalArchived / limit),
-      currentPage: page,
-      limit,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
       data: archived,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error", details: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ✅ UPDATE FINE
-const updateFine = async (req, res) => {
+// =============================
+// UPDATE FINE
+// =============================
+export const updateFine = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fineId, employeeId, fineType, fineAmount, fineDate, description, status, archiveFine } = req.body;
+    const {
+      fineType,
+      fineAmount,
+      fineDate,
+      description,
+      status,
+      archiveFine,
+    } = req.body;
 
     const fine = await Fine.findById(id);
     if (!fine) return res.status(404).json({ error: "Fine not found" });
 
-    fine.fineId = fineId || fine.fineId;
-    fine.employeeId = employeeId || fine.employeeId;
     fine.fineType = fineType || fine.fineType;
     fine.fineAmount = fineAmount ?? fine.fineAmount;
     fine.fineDate = fineDate || fine.fineDate;
@@ -126,29 +145,21 @@ const updateFine = async (req, res) => {
   }
 };
 
-// ✅ ARCHIVE (SOFT DELETE) FINE
-const deleteFine = async (req, res) => {
+// =============================
+// SOFT DELETE (ARCHIVE) FINE
+// =============================
+export const deleteFine = async (req, res) => {
   try {
     const { id } = req.params;
-    const fine = await Fine.findById(id);
 
+    const fine = await Fine.findById(id);
     if (!fine) return res.status(404).json({ error: "Fine not found" });
 
     fine.archiveFine = true;
     await fine.save();
 
-    return res.status(200).json({
-      message: "Fine archived successfully",
-    });
+    return res.status(200).json({ message: "Fine archived successfully" });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-};
-
-module.exports = {
-  createFine,
-  getFineList,
-  getArchivedFines,
-  updateFine,
-  deleteFine,
 };

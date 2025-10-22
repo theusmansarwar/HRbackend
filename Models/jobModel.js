@@ -1,16 +1,13 @@
-const mongoose = require("mongoose");
+// models/Job.js
+import mongoose from "mongoose";
 
 const jobSchema = new mongoose.Schema(
   {
-    jobTitle: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    jobDescription: {
-      type: String,
-      required: true,
-    },
+    jobId: 
+    { type: String, 
+      unique: true },
+    jobTitle: { type: String, required: true, trim: true },
+    jobDescription: { type: String, required: true },
     departmentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Department",
@@ -27,30 +24,13 @@ const jobSchema = new mongoose.Schema(
       default: "Active",
       required: true,
     },
-    postingDate: {
-      type: Date,
-      default: Date.now,
-      required: true,
-    },
-    expiryDate: {
-      type: Date,
-      required: true,
-    },
-    isArchived: {
-      type: Boolean,
-      default: false,
-    },
-    socialMediaLinks: {
-      type: [String],
-      default: [],
-    },
-    applicationsCount: {
-      type: Number,
-      default: 0,
-    },
+    postingDate: { type: Date, default: Date.now, required: true },
+    expiryDate: { type: Date, required: true },
+    isArchived: { type: Boolean, default: false },
+    socialMediaLinks: { type: [String], default: [] },
+    applicationsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-const Job = mongoose.model("Job", jobSchema);
-module.exports = Job;
+export default mongoose.model("Job", jobSchema);
