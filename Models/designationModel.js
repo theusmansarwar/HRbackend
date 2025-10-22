@@ -3,7 +3,10 @@ const mongoose = require("mongoose");
 const designationSchema = new mongoose.Schema(
   {
     designationId: {
-      type: String, 
+      type: String,
+      required: true,
+      unique: true,
+      uppercase: true,
       trim: true,
     },
     designationName: {

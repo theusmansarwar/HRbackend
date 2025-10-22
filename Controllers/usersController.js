@@ -1,7 +1,7 @@
 const User = require("../Models/User.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const Role = require("../Models/Roles"); // 👈 make sure this is imported at top
+const Role = require("../Models/Roles"); // make sure this is imported at top
 
 // LOGIN
 const loginUser = async (req, res) => {
@@ -37,7 +37,7 @@ const loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        modules: roleData ? roleData.modules : [], // 👈 yahan modules array bhejna zaruri hai
+        modules: roleData ? roleData.modules : [], // yahan modules array bhejna zaruri hai
       },
       token,
     });

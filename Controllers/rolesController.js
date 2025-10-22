@@ -5,7 +5,10 @@ const createRole = async (req, res) => {
   try {
     const { name, modules, description, status } = req.body;
 
-    // Check if role already exists
+    if (!name) {
+      return res.status(400).json({ message: "Role name is required" });
+    }
+
     const existingRole = await Role.findOne({ name });
     if (existingRole) return res.status(400).json({ message: "Role already exists" });
 
@@ -14,10 +17,11 @@ const createRole = async (req, res) => {
 
     res.status(201).json({ message: "Role created successfully", role: newRole });
   } catch (err) {
-    console.error(err);
+    console.error("Error creating role:", err); 
     res.status(500).json({ message: "Server error while creating role" });
   }
 };
+
 
 // -------------------- GET ALL ROLES --------------------
 const getAllRoles = async (req, res) => {

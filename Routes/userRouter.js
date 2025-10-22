@@ -8,19 +8,19 @@ const usersController = require("../Controllers/usersController");
 router.post("/login", usersController.loginUser);
 
 // Admin creates users
-router.post("/signup", protect, verifyRole(["Admin"]), usersController.signupUser);
+router.post("/signup", protect, verifyRole(["HR"]), usersController.signupUser);
 
 // Admin/HR gets all users
-router.get("/all", protect, verifyRole(["Admin", "HR"]), usersController.getAllUsers);
+router.get("/getUsers", protect, verifyRole(["HR"]), usersController.getAllUsers);
 
 // Any logged-in user gets profile
 router.get("/profile", protect, usersController.getProfile);
 
 // Admin/HR updates user
-router.put("/:id", protect, verifyRole(["Admin", "HR"]), usersController.updateUser);
+router.put("/updateUser/:id", protect, verifyRole(["HR"]), usersController.updateUser);
 
 // Admin deletes user
-router.delete("/:id", protect, verifyRole(["Admin"]), usersController.deleteUser);
+router.delete("/deleteUser/:id", protect, verifyRole(["HR"]), usersController.deleteUser);
 
 
 module.exports = router;
