@@ -1,4 +1,4 @@
-const User = require("../Models/User.js");
+const User = require("../Models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Role = require("../Models/Roles"); // make sure this is imported at top
@@ -69,13 +69,49 @@ const signupUser = async (req, res) => {
 // GET ALL USERS
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
-    res.json(users);
+    // 🧭 Pagination & search query
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
+
+    // 🔍 Base filter for users
+    const baseFilter = {}; // e.g., { status: "active" } if needed
+
+    // 🔹 Search filter: match by name, email, or role
+    if (search) {
+      const regex = new RegExp(search, "i");
+      baseFilter.$or = [
+        { name: regex },
+        { email: regex },
+        { role: regex },
+      ];
+    }
+
+    // 🔹 Fetch users (exclude password)
+    const users = await User.find(baseFilter)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    // 🔹 Total count for pagination
+    const total = await User.countDocuments(baseFilter);
+
+    // ✅ Send structured response
+    return res.status(200).json({
+      message: "Users fetched successfully ✅",
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
+      data: users,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error fetching users" });
+    console.error("Error fetching users:", err);
+    return res.status(500).json({ message: "Error fetching users" });
   }
 };
+
 
 // GET PROFILE
 const getProfile = async (req, res) => {

@@ -56,30 +56,73 @@ export const createLeave = async (req, res) => {
 };
 
 // READ ACTIVE LEAVES (with pagination + populate)
+// export const getLeaveList = async (req, res) => {
+//   try {
+//     const { page = 1, limit = 10 } = req.query;
+//     const skip = (page - 1) * limit;
+
+//     const leaves = await Leave.find({ isArchived: false })
+//       .populate("employeeId", "firstName lastName email")
+//       .sort({ createdAt: -1 })
+//       .skip(parseInt(skip))
+//       .limit(parseInt(limit));
+
+//     const total = await Leave.countDocuments({ isArchived: false });
+
+//     return res.status(200).json({
+//       message: "Active leaves fetched",
+//       total,
+//       page: parseInt(page),
+//       limit: parseInt(limit),
+//       data: leaves,
+//     });
+//   } catch (error) {
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
 export const getLeaveList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
 
-    const leaves = await Leave.find({ isArchived: false })
-      .populate("employeeId", "firstName lastName email")
+    const baseFilter = { isArchived: false };
+
+    let leaves = await Leave.find(baseFilter)
+      .populate("employeeId", "firstName lastName email employeeId")
       .sort({ createdAt: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit));
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-    const total = await Leave.countDocuments({ isArchived: false });
+    if (search) {
+      const regex = new RegExp(search, "i");
+      leaves = leaves.filter(
+        (leave) =>
+          regex.test(leave.leaveType || "") ||
+          regex.test(leave.status || "") ||
+          regex.test(leave.reason || "") ||
+          regex.test(leave.employeeId?.firstName || "") ||
+          regex.test(leave.employeeId?.lastName || "") ||
+          regex.test(leave.employeeId?.email || "")
+      );
+    }
+
+    const total = await Leave.countDocuments(baseFilter);
 
     return res.status(200).json({
-      message: "Active leaves fetched",
+      message: "Active leaves fetched successfully ✅",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: leaves,
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    console.error("Error fetching leaves:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
+
 
 // READ ARCHIVED LEAVES (with pagination + populate)
 export const getArchivedLeaves = async (req, res) => {

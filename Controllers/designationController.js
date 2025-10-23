@@ -63,26 +63,41 @@ const createDesignation = async (req, res) => {
 // READ ACTIVE DESIGNATIONS
 const getDesignationList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
 
-    const designations = await Designation.find({ archive: false })
+    const baseFilter = { archive: false };
+
+    let designations = await Designation.find(baseFilter)
       .populate("departmentId", "departmentName")
       .sort({ createdAt: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit));
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-    const total = await Designation.countDocuments({ archive: false });
+    // Manual search post-populate
+    if (search) {
+      const regex = new RegExp(search, "i");
+      designations = designations.filter(
+        (d) =>
+          regex.test(d.designationName || "") ||
+          regex.test(d.departmentId?.departmentName || "")
+      );
+    }
+
+    const total = await Designation.countDocuments(baseFilter);
 
     return res.status(200).json({
-      message: "Active Designations Fetched",
+      message: "Active designations fetched successfully ✅",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: designations,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error(error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
 

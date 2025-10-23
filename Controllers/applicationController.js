@@ -69,39 +69,55 @@ export const createApplication = async (req, res) => {
 };
 
 // GET ACTIVE APPLICATION LIST (with pagination + populate)
-export const getApplicationList = async (req, res) => {
+ export const getApplicationList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    // Extract query params
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search || "";
 
-    const filter = { isArchived: false };
+    // Filter for active (non-archived) applications + search
+    const filter = {
+      isArchived: false,
+      $or: [
+        { applicantName: { $regex: search, $options: "i" } },
+        { applicantEmail: { $regex: search, $options: "i" } },
+        { applicantPhone: { $regex: search, $options: "i" } },
+        { status: { $regex: search, $options: "i" } },
+      ],
+    };
 
-    // Fetch applications with populated job info
-    const applications = await Application.find(filter)
-      .populate("jobId", "jobId") // ✅ only fetch the auto-increment jobId
-      .sort({ createdAt: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit));
-
-    // Replace jobId object with its string value
-    const formattedApplications = applications.map((app) => ({
-      ...app.toObject(),
-      jobId: app.jobId?.jobId || null, // 
-    }));
-
+    // Total count
     const total = await Application.countDocuments(filter);
 
+    // Fetch with pagination + populate job info
+    const applications = await Application.find(filter)
+      .populate("jobId", "jobId")
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip((page - 1) * limit);
+
+    // Replace jobId object with its value
+    const formattedApplications = applications.map((app) => ({
+      ...app.toObject(),
+      jobId: app.jobId?.jobId || null,
+    }));
+
+    // Send response
     return res.status(200).json({
       message: "Active application list fetched",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: formattedApplications,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error fetching applications:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
+
 
 // GET ARCHIVED APPLICATION LIST
 export const getArchivedApplications = async (req, res) => {

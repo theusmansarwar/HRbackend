@@ -107,31 +107,46 @@ const createEmployee = async (req, res) => {
 };
 
 // READ ACTIVE EMPLOYEES
-const getEmployeeList = async (req, res) => {
+ const getEmployeeList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
-
-    const employees = await Employee.find({ isArchived: false })
+    // Query Params
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search || ""; // search keyword
+    // Build filter condition
+    const filter = {
+      isArchived: false,
+      $or: [
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phoneNumber: { $regex: search, $options: "i" } },
+      ],
+    };
+    // Total count for pagination
+    const total = await Employee.countDocuments(filter);
+    // Fetch filtered + paginated employees
+    const employees = await Employee.find(filter)
       .populate("departmentId", "departmentName")
       .populate("designationId", "designationName")
       .sort({ createdAt: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit));
-
-    const total = await Employee.countDocuments({ isArchived: false });
-
+      .limit(limit)
+      .skip((page - 1) * limit);
+    // Send response
     return res.status(200).json({
       message: "Active Employees Fetched",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: employees,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error fetching employees:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
+
 
 // READ ARCHIVED EMPLOYEES
 const getArchivedEmployees = async (req, res) => {

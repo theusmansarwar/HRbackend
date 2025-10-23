@@ -54,31 +54,57 @@ export const createPerformance = async (req, res) => {
 // GET PERFORMANCE LIST (with pagination)
 export const getPerformanceList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    // Safe query parameter handling
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
 
-    const list = await Performance.find({ status: { $ne: "Archived" } })
-      .populate("employeeId", "firstName lastName email")
+    // Base filter (excluding archived)
+    const baseFilter = { status: { $ne: "Archived" } };
+
+    // Fetch performance records with employee & reviewer info
+    let performanceList = await Performance.find(baseFilter)
+      .populate("employeeId", "firstName lastName email employeeId")
       .populate("reviewerId", "firstName lastName email")
-      .skip(parseInt(skip))
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-    const total = await Performance.countDocuments({ status: { $ne: "Archived" } });
+    // Apply manual search after populate (for related fields)
+    if (search) {
+      const regex = new RegExp(search, "i");
+      performanceList = performanceList.filter(
+        (item) =>
+          regex.test(item.reviewPeriod || "") ||
+          regex.test(item.performanceRating || "") ||
+          regex.test(item.comments || "") ||
+          regex.test(item.employeeId?.firstName || "") ||
+          regex.test(item.employeeId?.lastName || "") ||
+          regex.test(item.employeeId?.email || "") ||
+          regex.test(item.reviewerId?.firstName || "") ||
+          regex.test(item.reviewerId?.lastName || "") ||
+          regex.test(item.reviewerId?.email || "")
+      );
+    }
 
+    // Get total count for pagination
+    const total = await Performance.countDocuments(baseFilter);
+
+    // Send clean response
     return res.status(200).json({
-      status: 200,
-      message: "Performance list fetched successfully",
+      message: "Active performance records fetched successfully ✅",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      data: list,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
+      data: performanceList,
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ status: 500, message: "Server Error", details: error.message });
+    console.error("Error fetching performance list:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
+
 
 // GET SINGLE PERFORMANCE BY ID
 export const getPerformanceById = async (req, res) => {

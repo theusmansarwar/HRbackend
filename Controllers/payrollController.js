@@ -82,28 +82,52 @@ export const createPayroll = async (req, res) => {
 // READ ACTIVE PAYROLLS (with pagination)
 export const getPayrollList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    // Extract query parameters safely
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
 
-    const payrolls = await Payroll.find({ isArchived: false })
-      .populate("employeeId", "firstName lastName")
-      .skip(parseInt(skip))
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+    // Base filter for active payrolls
+    const baseFilter = { isArchived: false };
 
-    const total = await Payroll.countDocuments({ isArchived: false });
+    // Fetch payrolls with populated employee info
+    let payrolls = await Payroll.find(baseFilter)
+      .populate("employeeId", "firstName lastName email")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
+    // Manual search filter (since populate runs post-query)
+    if (search) {
+      const regex = new RegExp(search, "i");
+      payrolls = payrolls.filter(
+        (payroll) =>
+          regex.test(payroll.salaryMonth || "") ||
+          regex.test(String(payroll.totalSalary || "")) ||
+          regex.test(payroll.employeeId?.firstName || "") ||
+          regex.test(payroll.employeeId?.lastName || "") ||
+          regex.test(payroll.employeeId?.email || "")
+      );
+    }
+
+    // Total count for pagination
+    const total = await Payroll.countDocuments(baseFilter);
+
+    // Send response
     return res.status(200).json({
-      message: "Active payrolls fetched",
+      message: "Active payrolls fetched successfully ✅",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: payrolls,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error fetching payrolls:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
+
 
 // READ ARCHIVED PAYROLLS (with pagination)
 export const getArchivedPayrolls = async (req, res) => {

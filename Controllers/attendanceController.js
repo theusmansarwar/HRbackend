@@ -53,27 +53,52 @@ export const createAttendance = async (req, res) => {
 // READ ACTIVE ATTENDANCE LIST (with pagination + populate)
 export const getAttendanceList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    // Extract query parameters safely
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
 
-    const total = await Attendance.countDocuments({ isArchived: false });
-    const attendanceList = await Attendance.find({ isArchived: false })
+    // Base filter for non-archived attendance records
+    const baseFilter = { isArchived: false };
+
+    // Fetch attendance records with populated employee info
+    let attendanceList = await Attendance.find(baseFilter)
       .populate("employeeId", "firstName lastName email")
       .sort({ createdAt: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit));
+      .skip((page - 1) * limit)
+      .limit(limit);
 
+    // Apply manual search filtering (post-populate)
+    if (search) {
+      const regex = new RegExp(search, "i");
+      attendanceList = attendanceList.filter(
+        (record) =>
+          regex.test(record.attendanceDate || "") ||
+          regex.test(record.status || "") ||
+          regex.test(record.employeeId?.firstName || "") ||
+          regex.test(record.employeeId?.lastName || "") ||
+          regex.test(record.employeeId?.email || "")
+      );
+    }
+
+    // Get total count for pagination
+    const total = await Attendance.countDocuments(baseFilter);
+
+    // Send structured response
     return res.status(200).json({
-      message: "Active attendance list fetched",
+      message: "Active attendance list fetched successfully ✅",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: attendanceList,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error fetching attendance:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
+
 
 // READ ARCHIVED ATTENDANCE LIST (with pagination + populate)
 export const getArchivedAttendances = async (req, res) => {

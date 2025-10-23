@@ -52,32 +52,78 @@ export const createFine = async (req, res) => {
 // =============================
 // GET ALL ACTIVE FINES
 // =============================
+// export const getFineList = async (req, res) => {
+//   try {
+//     const { page = 1, limit = 10 } = req.query;
+//     const skip = (page - 1) * limit;
+
+//     const filter = { archiveFine: false };
+
+//     const fines = await Fine.find(filter)
+//       .populate("employeeId", "firstName lastName email")
+//       .sort({ createdAt: -1 })
+//       .skip(parseInt(skip))
+//       .limit(parseInt(limit));
+
+//     const total = await Fine.countDocuments(filter);
+
+//     return res.status(200).json({
+//       message: "Active fines fetched successfully",
+//       total,
+//       page: parseInt(page),
+//       limit: parseInt(limit),
+//       data: fines,
+//     });
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
 export const getFineList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
 
-    const filter = { archiveFine: false };
+    // Base filter for non-archived fines
+    const baseFilter = { archiveFine: false };
 
-    const fines = await Fine.find(filter)
+    // Fetch fines with employee info (populate first)
+    let fines = await Fine.find(baseFilter)
       .populate("employeeId", "firstName lastName email")
       .sort({ createdAt: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit));
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-    const total = await Fine.countDocuments(filter);
+    // Manual search filter (because populate is post-query)
+    if (search) {
+      const regex = new RegExp(search, "i");
+      fines = fines.filter(
+        (fine) =>
+          regex.test(fine.fineReason) ||
+          regex.test(String(fine.fineAmount)) ||
+          regex.test(fine.employeeId?.firstName || "") ||
+          regex.test(fine.employeeId?.lastName || "") ||
+          regex.test(fine.employeeId?.email || "")
+      );
+    }
+
+    const total = await Fine.countDocuments(baseFilter);
 
     return res.status(200).json({
-      message: "Active fines fetched successfully",
+      message: "Active fines fetched successfully ✅",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: fines,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error fetching fines:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
+
+
 
 // =============================
 // GET ARCHIVED FINES

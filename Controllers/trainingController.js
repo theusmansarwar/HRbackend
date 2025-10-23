@@ -48,30 +48,56 @@ export const createTraining = async (req, res) => {
   }
 };
 
-export const getTrainingList = async (req, res) => {
+ export const getTrainingList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    // Extract query parameters safely
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
 
-    const trainings = await Training.find({ isArchived: false })
-      .populate("employeeId", "firstName lastName employeeId")
-      .skip(parseInt(skip))
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+    // Base filter for active trainings
+    const baseFilter = { isArchived: false };
 
-    const total = await Training.countDocuments({ isArchived: false });
+    // Fetch trainings with populated employee info
+    let trainings = await Training.find(baseFilter)
+      .populate("employeeId", "firstName lastName email employeeId")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
+    // Apply manual search after populate (same style as payroll)
+    if (search) {
+      const regex = new RegExp(search, "i");
+      trainings = trainings.filter(
+        (training) =>
+          regex.test(training.trainingTitle || "") ||
+          regex.test(training.trainingType || "") ||
+          regex.test(training.trainingStatus || "") ||
+          regex.test(training.employeeId?.firstName || "") ||
+          regex.test(training.employeeId?.lastName || "") ||
+          regex.test(training.employeeId?.email || "") ||
+          regex.test(String(training.employeeId?.employeeId || ""))
+      );
+    }
+
+    // Get total count for pagination
+    const total = await Training.countDocuments(baseFilter);
+
+    // Send clean response
     return res.status(200).json({
-      message: "Active training list fetched",
+      message: "Active trainings fetched successfully ✅",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: trainings,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error fetching trainings:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
+
 
 export const getArchivedTrainings = async (req, res) => {
   try {

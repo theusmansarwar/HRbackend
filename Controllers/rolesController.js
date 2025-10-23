@@ -24,13 +24,57 @@ const createRole = async (req, res) => {
 
 
 // -------------------- GET ALL ROLES --------------------
+// const getAllRoles = async (req, res) => {
+//   try {
+//     const roles = await Role.find();
+//     res.json(roles);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error while fetching roles" });
+//   }
+// };
+
 const getAllRoles = async (req, res) => {
   try {
-    const roles = await Role.find();
-    res.json(roles);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error while fetching roles" });
+    // Extract query parameters safely
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
+
+    // Base filter (if you have an archive flag, otherwise fetch all)
+    const baseFilter = {}; // e.g., { isArchived: false } if you track archiving
+
+    // Fetch roles with optional population if needed
+    let roles = await Role.find(baseFilter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    // Manual search filter
+    if (search) {
+      const regex = new RegExp(search, "i");
+      roles = roles.filter(
+        (role) =>
+          regex.test(role.roleName || "") || // assuming role has a name field
+          regex.test(role.description || "")  // optional field
+      );
+    }
+
+    // Total count for pagination
+    const total = await Role.countDocuments(baseFilter);
+
+    // Send structured response
+    return res.status(200).json({
+      message: "Roles fetched successfully ✅",
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
+      data: roles,
+    });
+  } catch (error) {
+    console.error("Error fetching roles:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 };
 
