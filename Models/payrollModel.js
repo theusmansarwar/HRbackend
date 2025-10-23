@@ -50,7 +50,6 @@ const payrollSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["Cash", "Bank Transfer", "Cheque"],
       required: true,
     },
     month: {
@@ -64,7 +63,6 @@ const payrollSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Paid", "Pending", "Unpaid"],
       default: "Pending",
       required: true,
     },

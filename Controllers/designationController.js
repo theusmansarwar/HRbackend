@@ -41,8 +41,7 @@ const createDesignation = async (req, res) => {
       departmentId,
       status,
       archive: false,
-      createdDate: new Date(),
-      updatedDate: new Date(),
+
     });
 
     return res.status(201).json({

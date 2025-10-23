@@ -5,11 +5,11 @@ import Attendance from "../Models/attendanceModel.js";
 // CREATE ATTENDANCE
 export const createAttendance = async (req, res) => {
   try {
-    const { employeeId, date, status, checkInTime, checkOutTime, shiftName, overtimeHours } = req.body;
+    const { employeeId, status, checkInTime, checkOutTime, shiftName, overtimeHours } = req.body;
 
     // Validations
     if (!employeeId) return res.status(400).json({ error: "EmployeeId is required" });
-    if (!date) return res.status(400).json({ error: "Date is required" });
+    // if (!date) return res.status(400).json({ error: "Date is required" });
     if (!status) return res.status(400).json({ error: "Status is required" });
     if (!checkInTime) return res.status(400).json({ error: "Check In Time is required" });
     if (!checkOutTime) return res.status(400).json({ error: "Check Out Time is required" });
@@ -32,7 +32,6 @@ export const createAttendance = async (req, res) => {
     const attendanceCreated = await Attendance.create({
       attendanceId,
       employeeId,
-      date,
       status,
       checkInTime,
       checkOutTime,
@@ -143,13 +142,13 @@ export const getAttendanceById = async (req, res) => {
 export const updateAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-    const { employeeId, date, status, checkInTime, checkOutTime, shiftName, overtimeHours } = req.body;
+    const { employeeId, status, checkInTime, checkOutTime, shiftName, overtimeHours } = req.body;
 
     const attendance = await Attendance.findById(id);
     if (!attendance) return res.status(404).json({ error: "Attendance not found" });
 
     attendance.employeeId = employeeId;
-    attendance.date = date;
+   
     attendance.status = status;
     attendance.checkInTime = checkInTime;
     attendance.checkOutTime = checkOutTime;

@@ -38,8 +38,6 @@ const performanceSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Not Archived", "Archived"],
-      default: "Not Archived",
       required: true,
     },
   },

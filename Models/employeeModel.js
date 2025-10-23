@@ -52,21 +52,14 @@ const employeeSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Designation",
       required: true,
-    },
-    dateOfJoining: {
-      type: Date,
-      required: true,
-      default: Date.now,
-    },
+    }
+    ,
     employeementType: {
       type: String,
-      enum: ["Full-Time", "Part-Time", "Internship", "Contract", "Remote"],
       required: true,
     },
     status: {
       type: String,
-      enum: ["Active", "Inactive", "On Leave", "Terminated", "Resigned"],
-      default: "Active",
       required: true,
     },
     salary: {

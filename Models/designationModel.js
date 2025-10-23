@@ -18,22 +18,13 @@ const designationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: "Department",
       required: true,
-    },
-    createdDate: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedDate: {
-      type: Date,
-      default: Date.now,
-    },
+    } ,
     archive: {
       type: Boolean,
       default: false,
     },
     status: {
       type: String,
-      enum: ["Active", "Inactive"],
       default: "Active",
     },
   },

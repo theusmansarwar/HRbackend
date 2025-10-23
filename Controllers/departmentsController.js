@@ -8,8 +8,6 @@ export const createDepartment = async (req, res) => {
       departmentName,
       headOfDepartment,
       status,
-      createdDate,
-      updatedDate,
       archiveDepartment,
     } = req.body;
 
@@ -33,8 +31,6 @@ export const createDepartment = async (req, res) => {
       departmentId,
       departmentName,
       headOfDepartment,
-      createdDate: createdDate || new Date(),
-      updatedDate: updatedDate || new Date(),
       status: status || "Active",
       archiveDepartment: archiveDepartment || false,
     });
@@ -135,7 +131,6 @@ export const updateDepartment = async (req, res) => {
       departmentName,
       headOfDepartment,
       status,
-      updatedDate,
       archiveDepartment,
     } = req.body;
 
@@ -150,7 +145,6 @@ export const updateDepartment = async (req, res) => {
         departmentName,
         headOfDepartment,
         status,
-        updatedDate: updatedDate || new Date(),
         archiveDepartment,
       },
       { new: true }

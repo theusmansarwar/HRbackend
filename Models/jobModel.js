@@ -3,9 +3,7 @@ import mongoose from "mongoose";
 
 const jobSchema = new mongoose.Schema(
   {
-    jobId: 
-    { type: String, 
-      unique: true },
+    jobId: { type: String, unique: true },
     jobTitle: { type: String, required: true, trim: true },
     jobDescription: { type: String, required: true },
     departmentId: {
@@ -20,8 +18,6 @@ const jobSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Closed"],
-      default: "Active",
       required: true,
     },
     postingDate: { type: Date, default: Date.now, required: true },

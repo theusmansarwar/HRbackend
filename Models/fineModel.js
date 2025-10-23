@@ -35,8 +35,7 @@ const fineSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Paid", "Unpaid"],
-      default: "Unpaid",
+       required:true,
     },
     archiveFine: {
       type: Boolean,

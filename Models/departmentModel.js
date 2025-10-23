@@ -19,18 +19,9 @@ const departmentSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-    },
-    createdDate: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedDate: {
-      type: Date,
-      default: Date.now,
-    },
+    } ,
     status: {
       type: String,
-      enum: ["Active", "Inactive"],
       default: "Active",
     },
     isArchived: {
