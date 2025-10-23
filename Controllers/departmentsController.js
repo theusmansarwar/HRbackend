@@ -56,23 +56,22 @@ export const createDepartment = async (req, res) => {
 // GET ACTIVE DEPARTMENTS
 export const getDepartmentList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const pageNum = parseInt(req.query.page) || 1;
+    const limitNum = parseInt(req.query.limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
 
-    res.set("Cache-Control", "no-store");
-
-    const departments = await Department.find({ archiveDepartment: false })
+    const departments = await Department.find({ isArchived: false })
       .sort({ createdAt: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit));
+      .skip(skip)
+      .limit(limitNum);
 
-    const total = await Department.countDocuments({ archiveDepartment: false });
+    const total = await Department.countDocuments({ isArchived: false });
 
     return res.status(200).json({
       message: "Active department list fetched",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      page: pageNum,
+      limit: limitNum,
       data: departments,
     });
   } catch (error) {
@@ -82,6 +81,7 @@ export const getDepartmentList = async (req, res) => {
     });
   }
 };
+
 
 
 // GET ARCHIVED DEPARTMENTS

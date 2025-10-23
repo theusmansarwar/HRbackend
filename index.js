@@ -9,6 +9,7 @@ const designationRouter = require('./Routes/designationRouter');
 const attendanceRouter = require('./Routes/attendanceRouter');
 const leaveRouter = require('./Routes/leaveRouter');
 const jobRouter = require('./Routes/jobRouter');
+const reportsRouter = require('./Routes/reportsRouter');
 const applicationRouter = require('./Routes/applicationRouter');
 const payrollRouter = require('./Routes/payrollRouter');
 const performanceRouter = require('./Routes/performanceRouter');
@@ -41,10 +42,11 @@ app.use("/applications", applicationRouter);
 app.use("/payroll", payrollRouter);
 app.use("/performance", performanceRouter);
 app.use("/training", trainingRouter);
+app.use("/reports", reportsRouter);
 app.use("/users", userRouter);
 app.use("/roles", roleRouter);
 app.use("/fines", require("./Routes/fineRouter"));
- 
+
 connectDB().then(() => {
   app.listen(port, () => {
     console.log(`Server is running on Port: ${port}`);
