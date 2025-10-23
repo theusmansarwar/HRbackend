@@ -26,9 +26,9 @@ export const createApplication = async (req, res) => {
     if (!remarks) return res.status(400).json({ error: "Remarks are required" });
 
     // Check if application already exists
-    const existingApplication = await Application.findOne({ applicantEmail, jobId });
+    const existingApplication = await Application.findOne({ applicantEmail});
     if (existingApplication) {
-      return res.status(400).json({ error: "Application already exists for this job" });
+      return res.status(400).json({ error: "Application already exists" });
     }
 
     // Generate unique applicationId like "APP-0001"

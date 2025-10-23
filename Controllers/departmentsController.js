@@ -1,118 +1,167 @@
-const Department = require("../Models/departmentModel");
+// controllers/departmentController.js
+import Department from "../Models/departmentModel.js";
 
-const createDepartment = async (req, res) => {
-  const { departmentId, departmentName, headOfDepartment, createdDate, updatedDate, status, archiveDepartment } = req.body;
-
-  if (!departmentId) return res.status(400).json({ error: "Department ID is required" });
-  if (!departmentName) return res.status(400).json({ error: "Department Name is required" });
-  if (!headOfDepartment) return res.status(400).json({ error: "Head of Department is required" });
-
+// CREATE DEPARTMENT
+export const createDepartment = async (req, res) => {
   try {
-    const exists = await Department.findOne({ departmentId });
-    if (exists) {
-      return res.status(400).json({ error: "Department Already Exists!" });
-    }
+    const {
+      departmentName,
+      headOfDepartment,
+      status,
+      createdDate,
+      updatedDate,
+      archiveDepartment,
+    } = req.body;
 
+    // VALIDATIONS
+    if (!departmentName)
+      return res.status(400).json({ error: "Department Name is required" });
+    if (!headOfDepartment)
+      return res.status(400).json({ error: "Head of Department is required" });
+
+    // Generate auto-increment Department ID: "DEPT-0001"
+    const lastDept = await Department.findOne().sort({ createdAt: -1 });
+    let newIdNumber = 1;
+    if (lastDept && lastDept.departmentId) {
+      const lastNumber = parseInt(lastDept.departmentId.split("-")[1]);
+      newIdNumber = lastNumber + 1;
+    }
+    const departmentId = `DEPT-${newIdNumber.toString().padStart(4, "0")}`;
+
+    // CREATE NEW DEPARTMENT
     const department = await Department.create({
       departmentId,
       departmentName,
       headOfDepartment,
-      createdDate: new Date(createdDate),
-      updatedDate: new Date(updatedDate),
-      status,
-      archiveDepartment,
+      createdDate: createdDate || new Date(),
+      updatedDate: updatedDate || new Date(),
+      status: status || "Active",
+      archiveDepartment: archiveDepartment || false,
     });
 
-    return res.status(200).json({
-      message: "Department Created",
+    return res.status(201).json({
+      status: 201,
+      message: "Department created successfully",
       data: department,
     });
   } catch (error) {
-    console.error("Server Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Something went wrong while creating department",
+      details: error.message,
+    });
+  }
+};
+
+// GET ACTIVE DEPARTMENTS
+export const getDepartmentList = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    res.set("Cache-Control", "no-store");
+
+    const departments = await Department.find({ archiveDepartment: false })
+      .sort({ createdAt: -1 })
+      .skip(parseInt(skip))
+      .limit(parseInt(limit));
+
+    const total = await Department.countDocuments({ archiveDepartment: false });
+
+    return res.status(200).json({
+      message: "Active department list fetched",
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      data: departments,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Something went wrong while fetching departments",
+      error: error.message,
+    });
+  }
+};
+
+
+// GET ARCHIVED DEPARTMENTS
+export const getArchivedDepartments = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const archived = await Department.find({ archiveDepartment: true })
+      .sort({ createdAt: -1 })
+      .skip(parseInt(skip))
+      .limit(parseInt(limit));
+
+    const total = await Department.countDocuments({ archiveDepartment: true });
+
+    return res.status(200).json({
+      message: "Archived departments fetched",
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      data: archived,
+    });
+  } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
 
-
-const getDepartmentList = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-
-    const filter = { archiveDepartment: false };
-
-    const departments = await Department.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip((page - 1) * limit);
-
-    const totalDepartments = await Department.countDocuments(filter);
-
-    return res.status(200).json({
-      message: "Department List Fetched",
-      totalDepartments,
-      totalPages: Math.ceil(totalDepartments / limit),
-      currentPage: page,
-      limit: limit,
-      data: departments,
-    });
-  } catch (error) {
-    return res.status(500).json({ error: "Server Error" });
-  }
-};
-
-const getArchivedDepartments = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-
-    const filter = { archiveDepartment: true };
-
-    const archived = await Department.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip((page - 1) * limit);
-
-    const totalArchived = await Department.countDocuments(filter);
-
-    return res.status(200).json({
-      message: "Archived Departments",
-      totalArchived,
-      totalPages: Math.ceil(totalArchived / limit),
-      currentPage: page,
-      limit: limit,
-      data: archived,
-    });
-  } catch (error) {
-    return res.status(500).json({ error: "Server Error" });
-  }
-};
-
-const updateDepartment = async (req, res) => {
+// GET SINGLE DEPARTMENT BY ID
+export const getDepartmentById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { departmentId, departmentName, headOfDepartment, createdDate, updatedDate, status, archiveDepartment } = req.body;
-
-    if (!departmentId) return res.json({ error: "Department ID is required" });
-    if (!departmentName) return res.json({ error: "Department Name is required" });
-    if (!headOfDepartment) return res.json({ error: "Head of Department is required" });
 
     const department = await Department.findById(id);
-    if (!department) return res.status(404).json({ error: "Department not found" });
+    if (!department)
+      return res.status(404).json({ error: "Department not found" });
 
-    department.departmentId = departmentId;
-    department.departmentName = departmentName;
-    department.headOfDepartment = headOfDepartment;
-    department.createdDate = createdDate;
-    department.updatedDate = updatedDate;
-    department.status = status;
-    department.archiveDepartment = archiveDepartment;
+    return res.status(200).json({
+      message: "Department fetched successfully",
+      data: department,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
-    const updated = await department.save();
+// UPDATE DEPARTMENT
+export const updateDepartment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      departmentName,
+      headOfDepartment,
+      status,
+      updatedDate,
+      archiveDepartment,
+    } = req.body;
+
+    if (!departmentName)
+      return res.json({ error: "Department Name is required" });
+    if (!headOfDepartment)
+      return res.json({ error: "Head of Department is required" });
+
+    const updated = await Department.findByIdAndUpdate(
+      id,
+      {
+        departmentName,
+        headOfDepartment,
+        status,
+        updatedDate: updatedDate || new Date(),
+        archiveDepartment,
+      },
+      { new: true }
+    );
+
+    if (!updated)
+      return res.status(404).json({ error: "Department not found" });
 
     return res.json({
       status: 200,
-      message: "Department Updated Successfully",
+      message: "Department updated successfully",
       data: updated,
     });
   } catch (error) {
@@ -120,31 +169,22 @@ const updateDepartment = async (req, res) => {
   }
 };
 
-const deleteDepartment = async (req, res) => {
+// ARCHIVE (SOFT DELETE) DEPARTMENT
+export const deleteDepartment = async (req, res) => {
   try {
     const { id } = req.params;
 
     const department = await Department.findById(id);
-    if (!department) {
+    if (!department)
       return res.status(404).json({ error: "Department not found" });
-    }
 
     department.archiveDepartment = true;
     await department.save();
 
-    return res.json({
-      status: 200,
+    return res.status(200).json({
       message: "Department archived successfully",
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-};
-
-module.exports = {
-  createDepartment,
-  getDepartmentList,
-  getArchivedDepartments,
-  updateDepartment,
-  deleteDepartment,
 };

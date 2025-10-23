@@ -2,51 +2,111 @@ const Employee = require("../Models/employeeModel");
 
 // CREATE EMPLOYEE
 const createEmployee = async (req, res) => {
-  const requiredFields = [
-    "employeeId",
-    "firstName",
-    "lastName",
-    "email",
-    "phoneNumber",
-    "dateOfBirth",
-    "gender",
-    "cnic",
-    "departmentId",
-    "designationId",
-    "dateOfJoining",
-    "employeementType",
-    "status",
-    "salary",
-    "bankAccountNo",
-    "address",
-    "emergencyContactName",
-    "emergencyContactNo",
-  ];
-
-  // Validate missing fields
-  for (const field of requiredFields) {
-    if (!req.body[field]) return res.json({ error: `${field} is required` });
-  }
-
   try {
-    const { email } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      dateOfBirth,
+      gender,
+      cnic,
+      departmentId,
+      designationId,
+      dateOfJoining,
+      employeementType,
+      status,
+      salary,
+      bankAccountNo,
+      address,
+      emergencyContactName,
+      emergencyContactNo,
+    } = req.body;
 
+    // ✅ VALIDATIONS
+    const requiredFields = [
+      "firstName",
+      "lastName",
+      "email",
+      "phoneNumber",
+      "dateOfBirth",
+      "gender",
+      "cnic",
+      "departmentId",
+      "designationId",
+      "dateOfJoining",
+      "employeementType",
+      "status",
+      "salary",
+      "bankAccountNo",
+      "address",
+      "emergencyContactName",
+      "emergencyContactNo",
+    ];
+
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
+        return res.status(400).json({ error: `${field} is required` });
+      }
+    }
+
+    // ✅ Check if email already exists
     const existingEmployee = await Employee.findOne({ email, isArchived: false });
-    if (existingEmployee) return res.json({ error: "Employee already exists" });
+    if (existingEmployee) {
+      return res.status(400).json({ error: "Employee already exists" });
+    }
 
-    const employee = await Employee.create(req.body);
+    // ✅ Generate unique employeeId like "EMP-0001"
+    const lastEmployee = await Employee.findOne().sort({ createdAt: -1 });
+    let newIdNumber = 1;
 
-    return res.json({
-      status: 200,
+    if (lastEmployee && lastEmployee.employeeId) {
+      const lastNumber = parseInt(lastEmployee.employeeId.split("-")[1]);
+      if (!isNaN(lastNumber)) {
+        newIdNumber = lastNumber + 1;
+      }
+    }
+
+    const employeeId = `EMP-${newIdNumber.toString().padStart(4, "0")}`;
+
+    // ✅ Create new employee
+    const employee = await Employee.create({
+      employeeId,
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      dateOfBirth,
+      gender,
+      cnic,
+      departmentId,
+      designationId,
+      dateOfJoining,
+      employeementType,
+      status,
+      salary,
+      bankAccountNo,
+      address,
+      emergencyContactName,
+      emergencyContactNo,
+    });
+
+    return res.status(201).json({
+      status: 201,
       message: "Employee created successfully",
       data: employee,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error", details: error.message });
+    console.error("Error creating employee:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Something went wrong while creating employee",
+      details: error.message,
+    });
   }
 };
 
-// READ ACTIVE EMPLOYEES (with pagination)
+// READ ACTIVE EMPLOYEES
 const getEmployeeList = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -69,17 +129,17 @@ const getEmployeeList = async (req, res) => {
       data: employees,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error" });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// READ ARCHIVED EMPLOYEES (with pagination)
+// READ ARCHIVED EMPLOYEES
 const getArchivedEmployees = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    const archivedEmployees = await Employee.find({ isArchived: true })
+    const employees = await Employee.find({ isArchived: true })
       .populate("departmentId", "departmentName")
       .populate("designationId", "designationName")
       .sort({ createdAt: -1 })
@@ -93,17 +153,18 @@ const getArchivedEmployees = async (req, res) => {
       total,
       page: parseInt(page),
       limit: parseInt(limit),
-      data: archivedEmployees,
+      data: employees,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error" });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// GET SINGLE EMPLOYEE BY ID
+// GET SINGLE EMPLOYEE
 const getEmployeeById = async (req, res) => {
   try {
     const { id } = req.params;
+
     const employee = await Employee.findById(id)
       .populate("departmentId", "departmentName")
       .populate("designationId", "designationName");
@@ -115,7 +176,7 @@ const getEmployeeById = async (req, res) => {
       data: employee,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error" });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -128,7 +189,6 @@ const updateEmployee = async (req, res) => {
     if (!employee) return res.status(404).json({ error: "Employee not found" });
 
     const requiredFields = [
-      "employeeId",
       "firstName",
       "lastName",
       "email",
@@ -149,24 +209,23 @@ const updateEmployee = async (req, res) => {
     ];
 
     for (const field of requiredFields) {
-      if (!req.body[field]) return res.json({ error: `${field} is required` });
+      if (!req.body[field]) return res.status(400).json({ error: `${field} is required` });
     }
 
     Object.assign(employee, req.body);
-
     const updatedEmployee = await employee.save();
 
-    return res.json({
+    return res.status(200).json({
       status: 200,
       message: "Employee updated successfully",
       data: updatedEmployee,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error", details: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// SOFT DELETE (ARCHIVE) EMPLOYEE
+// SOFT DELETE EMPLOYEE
 const deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params;
@@ -177,10 +236,7 @@ const deleteEmployee = async (req, res) => {
     employee.isArchived = true;
     await employee.save();
 
-    return res.json({
-      status: 200,
-      message: "Employee archived successfully",
-    });
+    return res.status(200).json({ message: "Employee archived successfully" });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

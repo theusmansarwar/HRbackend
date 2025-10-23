@@ -1,175 +1,155 @@
 const Designation = require("../Models/designationModel");
 
+// CREATE DESIGNATION
 const createDesignation = async (req, res) => {
-  console.log("Incoming Body ===>", req.body);
-  const {
-    designationId,
-    designationName,
-    departmentId,
-    createdDate,
-    updatedDate,
-    archive,
-    status,
-  } = req.body;
-
-  if (!designationName) {
-    return res.json({ error: "Designation Name is required" });
-  }
-  if (!departmentId) {
-    return res.json({ error: "Department ID is required" });
-  }
-  if (!status) {
-    return res.json({ error: "Status is required" });
-  }
-
   try {
-    const designationExists = await Designation.findOne({
-      designationName,
-      departmentId,
-    });
-    if (designationExists) {
-      return res.json({
-        error: "Designation Already Exists!",
-      });
+    const { designationName, departmentId, status } = req.body;
+
+    // ✅ Required field validation
+    const requiredFields = ["designationName", "departmentId", "status"];
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
+        return res.status(400).json({ error: `${field} is required` });
+      }
     }
 
-    const designationCreated = await Designation.create({
+    // ✅ Check if already exists (same name under same department)
+    const existingDesignation = await Designation.findOne({
+      designationName,
+      departmentId,
+      archive: false,
+    });
+    if (existingDesignation) {
+      return res.status(400).json({ error: "Designation already exists" });
+    }
+
+    // ✅ Generate unique Designation ID like DSG-0001
+    const lastDesignation = await Designation.findOne().sort({ createdAt: -1 });
+    let newIdNumber = 1;
+
+    if (lastDesignation && lastDesignation.designationId) {
+      const lastNumber = parseInt(lastDesignation.designationId.split("-")[1]);
+      if (!isNaN(lastNumber)) newIdNumber = lastNumber + 1;
+    }
+
+    const designationId = `DSG-${newIdNumber.toString().padStart(4, "0")}`;
+
+    // ✅ Create new designation
+    const designation = await Designation.create({
       designationId,
       designationName,
       departmentId,
-      createdDate,
-      updatedDate,
-      archive,
       status,
+      archive: false,
+      createdDate: new Date(),
+      updatedDate: new Date(),
     });
 
-    return res.json({
-      status: 200,
-      message: "Designation Created",
-      data: designationCreated,
+    return res.status(201).json({
+      status: 201,
+      message: "Designation created successfully",
+      data: designation,
     });
   } catch (error) {
     console.error("Error creating designation:", error);
     return res.status(500).json({
-      error: "Server Error",
+      status: 500,
+      message: "Something went wrong while creating designation",
+      details: error.message,
     });
   }
 };
 
+// READ ACTIVE DESIGNATIONS
 const getDesignationList = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
 
-    const filter = { archive: false };
-
-    const designationList = await Designation.find(filter)
-      .populate("departmentId")
+    const designations = await Designation.find({ archive: false })
+      .populate("departmentId", "departmentName")
       .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip((page - 1) * limit);
+      .skip(parseInt(skip))
+      .limit(parseInt(limit));
 
-    const totalDesignations = await Designation.countDocuments(filter);
+    const total = await Designation.countDocuments({ archive: false });
 
     return res.status(200).json({
-      message: "Designation List Fetched",
-      totalDesignations,
-      totalPages: Math.ceil(totalDesignations / limit),
-      currentPage: page,
-      limit: limit,
-      data: designationList,
+      message: "Active Designations Fetched",
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      data: designations,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error" });
+    return res.status(500).json({ error: error.message });
   }
 };
 
+// READ ARCHIVED DESIGNATIONS
 const getArchivedDesignations = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
 
-    const filter = { archive: true };
-
-    const archivedList = await Designation.find(filter)
-      .populate("departmentId")
+    const designations = await Designation.find({ archive: true })
+      .populate("departmentId", "departmentName")
       .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip((page - 1) * limit);
+      .skip(parseInt(skip))
+      .limit(parseInt(limit));
 
-    const totalArchived = await Designation.countDocuments(filter);
+    const total = await Designation.countDocuments({ archive: true });
 
     return res.status(200).json({
-      message: "Archived Designations",
-      totalArchived,
-      totalPages: Math.ceil(totalArchived / limit),
-      currentPage: page,
-      limit: limit,
-      data: archivedList,
+      message: "Archived Designations Fetched",
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      data: designations,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Server Error" });
+    return res.status(500).json({ error: error.message });
   }
 };
 
+// UPDATE DESIGNATION
 const updateDesignation = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      designationId,
-      designationName,
-      departmentId,
-      createdDate,
-      updatedDate,
-      archive,
-      status,
-    } = req.body;
-
-    if (!designationName) {
-      return res.json({ error: "Designation Name is required" });
-    }
-    if (!departmentId) {
-      return res.json({ error: "Department ID is required" });
-    }
-    if (!status) {
-      return res.json({ error: "Status is required" });
-    }
-
     const designation = await Designation.findById(id);
+
     if (!designation) {
-      return res.status(404).json({
-        error: "Designation not found",
-      });
+      return res.status(404).json({ error: "Designation not found" });
     }
 
-    designation.designationId = designationId;
-    designation.designationName = designationName;
-    designation.departmentId = departmentId;
-    designation.createdDate = createdDate;
-    designation.updatedDate = updatedDate;
-    designation.archive = archive;
-    designation.status = status;
+    const requiredFields = ["designationName", "departmentId", "status"];
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
+        return res.status(400).json({ error: `${field} is required` });
+      }
+    }
+
+    Object.assign(designation, req.body, { updatedDate: new Date() });
 
     const updatedDesignation = await designation.save();
 
-    return res.json({
+    return res.status(200).json({
       status: 200,
       message: "Designation updated successfully",
       data: updatedDesignation,
     });
   } catch (error) {
     console.error("Error updating designation:", error);
-    return res.status(404).json({
-      error: error.message,
-    });
+    return res.status(500).json({ error: error.message });
   }
 };
 
+// SOFT DELETE DESIGNATION
 const deleteDesignation = async (req, res) => {
   try {
     const { id } = req.params;
-
     const designation = await Designation.findById(id);
+
     if (!designation) {
       return res.status(404).json({ error: "Designation not found" });
     }
@@ -177,14 +157,11 @@ const deleteDesignation = async (req, res) => {
     designation.archive = true;
     await designation.save();
 
-    return res.json({
-      status: 200,
+    return res.status(200).json({
       message: "Designation archived successfully",
     });
   } catch (error) {
-    return res.status(500).json({
-      error: error.message,
-    });
+    return res.status(500).json({ error: error.message });
   }
 };
 

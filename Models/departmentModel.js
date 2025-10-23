@@ -1,11 +1,11 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const departmentSchema = new mongoose.Schema(
   {
     departmentId: {
       type: String,
       required: true,
-      unique: true, // HR01, IT02 etc.
+      unique: true, 
       uppercase: true,
       trim: true,
     },
@@ -22,12 +22,10 @@ const departmentSchema = new mongoose.Schema(
     },
     createdDate: {
       type: Date,
-      required: true,
       default: Date.now,
     },
     updatedDate: {
       type: Date,
-      required: true,
       default: Date.now,
     },
     status: {
@@ -35,7 +33,7 @@ const departmentSchema = new mongoose.Schema(
       enum: ["Active", "Inactive"],
       default: "Active",
     },
-    archiveDepartment: {
+    isArchived: {
       type: Boolean,
       default: false,
     },
@@ -43,5 +41,4 @@ const departmentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Department = mongoose.model("Department", departmentSchema);
-module.exports = Department;
+export default mongoose.model("Department", departmentSchema);

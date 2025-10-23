@@ -15,14 +15,15 @@ const designationSchema = new mongoose.Schema(
       trim: true,
     },
     departmentId: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "Department",
       required: true,
     },
     createdDate: {
       type: Date,
       default: Date.now,
     },
-    updatedDate: { 
+    updatedDate: {
       type: Date,
       default: Date.now,
     },
