@@ -23,7 +23,6 @@ const jobSchema = new mongoose.Schema(
     postingDate: { type: Date, default: Date.now, required: true },
     expiryDate: { type: Date, required: true },
     isArchived: { type: Boolean, default: false },
-    socialMediaLinks: { type: [String], default: [] },
     applicationsCount: { type: Number, default: 0 },
   },
   { timestamps: true }

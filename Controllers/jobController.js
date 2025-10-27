@@ -12,7 +12,6 @@ export const createJob = async (req, res) => {
       status,
       postingDate,
       expiryDate,
-      socialMediaLinks,
     } = req.body;
 
     // VALIDATIONS
@@ -50,7 +49,6 @@ export const createJob = async (req, res) => {
       status,
       postingDate,
       expiryDate,
-      socialMediaLinks,
     });
 
     return res.status(201).json({
@@ -161,7 +159,6 @@ export const updateJob = async (req, res) => {
       status,
       postingDate,
       expiryDate,
-      socialMediaLinks,
     } = req.body;
 
     // VALIDATIONS
@@ -185,7 +182,6 @@ export const updateJob = async (req, res) => {
         status,
         postingDate,
         expiryDate,
-        socialMediaLinks,
       },
       { new: true }
     )

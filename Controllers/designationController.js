@@ -1,30 +1,31 @@
 import Designation from "../Models/designationModel.js";
 
-
-// CREATE DESIGNATION
 const createDesignation = async (req, res) => {
   try {
     const { designationName, departmentId, status } = req.body;
 
-    // ✅ Required field validation
+    // ✅ Collect missing fields
     const requiredFields = ["designationName", "departmentId", "status"];
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
-        return res.status(400).json({ error: `${field} is required` });
-      }
+    const missingFields = requiredFields.filter((field) => !req.body[field]);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        error: "Missing required fields",
+        missingFields,
+      });
     }
 
-    // ✅ Check if already exists (same name under same department)
     const existingDesignation = await Designation.findOne({
       designationName,
       departmentId,
       archive: false,
     });
+
     if (existingDesignation) {
       return res.status(400).json({ error: "Designation already exists" });
     }
 
-    // ✅ Generate unique Designation ID like DSG-0001
     const lastDesignation = await Designation.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
 
@@ -35,14 +36,12 @@ const createDesignation = async (req, res) => {
 
     const designationId = `DSG-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // ✅ Create new designation
     const designation = await Designation.create({
       designationId,
       designationName,
       departmentId,
       status,
       archive: false,
-
     });
 
     return res.status(201).json({
@@ -60,7 +59,6 @@ const createDesignation = async (req, res) => {
   }
 };
 
-// READ ACTIVE DESIGNATIONS
 const getDesignationList = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -75,7 +73,6 @@ const getDesignationList = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // Manual search post-populate
     if (search) {
       const regex = new RegExp(search, "i");
       designations = designations.filter(
@@ -88,7 +85,7 @@ const getDesignationList = async (req, res) => {
     const total = await Designation.countDocuments(baseFilter);
 
     return res.status(200).json({
-      message: "Active designations fetched successfully ✅",
+      message: "Active designations fetched successfully",
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
@@ -101,7 +98,6 @@ const getDesignationList = async (req, res) => {
   }
 };
 
-// READ ARCHIVED DESIGNATIONS
 const getArchivedDesignations = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -127,7 +123,6 @@ const getArchivedDesignations = async (req, res) => {
   }
 };
 
-// UPDATE DESIGNATION
 const updateDesignation = async (req, res) => {
   try {
     const { id } = req.params;
@@ -137,11 +132,16 @@ const updateDesignation = async (req, res) => {
       return res.status(404).json({ error: "Designation not found" });
     }
 
+    // ✅ Check for missing fields
     const requiredFields = ["designationName", "departmentId", "status"];
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
-        return res.status(400).json({ error: `${field} is required` });
-      }
+    const missingFields = requiredFields.filter((field) => !req.body[field]);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        error: "Missing required fields",
+        missingFields,
+      });
     }
 
     Object.assign(designation, req.body, { updatedDate: new Date() });
@@ -159,7 +159,6 @@ const updateDesignation = async (req, res) => {
   }
 };
 
-// SOFT DELETE DESIGNATION
 const deleteDesignation = async (req, res) => {
   try {
     const { id } = req.params;
@@ -182,7 +181,7 @@ const deleteDesignation = async (req, res) => {
 
 export {
   createDesignation,
-  getDesignationList,  
+  getDesignationList,
   getArchivedDesignations,
   updateDesignation,
   deleteDesignation,
