@@ -1,12 +1,11 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createPayroll,
   getPayrollList,
   getArchivedPayrolls,
   updatePayroll,
-  deletePayroll,
-} = require("../Controllers/payrollController");
-
+  deletePayroll
+} from "../Controllers/payrollController.js";
 const router = express.Router();
 
 router.post("/createPayroll", createPayroll);
@@ -15,4 +14,4 @@ router.get("/getArchivedPayrolls", getArchivedPayrolls);
 router.put("/updatePayroll/:id", updatePayroll);
 router.delete("/deletePayroll/:id", deletePayroll);
 
-module.exports = router;
+export default router;

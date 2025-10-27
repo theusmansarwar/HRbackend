@@ -1,8 +1,9 @@
-const express = require("express");
+import express from "express";
+import { protect } from "../Middlewares/authMiddleware.js";
+import { verifyRole } from "../Middlewares/verifyRole.js";
+import * as rolesController from "../Controllers/rolesController.js";
 const router = express.Router();
-const { protect } = require("../Middlewares/authMiddleware");
-const verifyRole = require("../Middlewares/verifyRole");
-const rolesController = require("../Controllers/rolesController");
+
 
 console.log("protect:", typeof protect);
 console.log("verifyRole:", typeof verifyRole);
@@ -18,4 +19,4 @@ router.delete("/deleteRole/:id", protect, verifyRole(["HR"]), rolesController.de
 // router.get("/getRoleByName/:name", protect, verifyRole(["Admin"]), rolesController.getRoleByName);
 router.get("/getRoleByName/:name", rolesController.getRoleByName);
 
-module.exports = router;
+export default router;

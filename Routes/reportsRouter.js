@@ -1,11 +1,11 @@
-const express = require("express");
-const {
-  createReport,
+import express from "express";
+import {
+  createReport, 
   getReports,
   getReportById,
   updateReport,
-  deleteReport,
-} = require("../Controllers/reportController");
+  deleteReport
+} from "../Controllers/reportController.js";
 
 const router = express.Router();
 
@@ -15,4 +15,4 @@ router.get("/getReportById/:id", getReportById);
 router.put("/updateReport/:id", updateReport);
 router.delete("/deleteReport/:id", deleteReport);
 
-module.exports = router;
+export default router;

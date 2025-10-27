@@ -1,12 +1,12 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createPerformance,
   getPerformanceList,
   getPerformanceById,
   updatePerformance,
   deletePerformance,
-  getArchivedPerformance,
-} = require("../Controllers/performanceController");
+  getArchivedPerformance
+} from "../Controllers/performanceController.js";
 
 const router = express.Router();
 
@@ -17,4 +17,4 @@ router.put("/updatePerformance/:id", updatePerformance);
 router.delete("/deletePerformance/:id", deletePerformance);
 router.get("/getArchivedPerformance", getArchivedPerformance);
 
-module.exports = router;
+export default router;

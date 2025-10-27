@@ -1,7 +1,14 @@
-const express=require("express");
-const {createEmployee, getEmployeeList, updateEmployee, deleteEmployee, getArchivedEmployees} = require('../Controllers/employeeController');
+import express from "express";
+import multer from "multer";
+import {  
+  createEmployee,
+  getEmployeeList,
+  updateEmployee,
+  deleteEmployee,
+  getArchivedEmployees
+} from "../Controllers/employeeController.js";
 const router = express.Router();
-const multer = require("multer");
+
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -20,7 +27,7 @@ router.put("/updateEmployee/:id", upload.single("profileImage"), updateEmployee)
 router.delete('/deleteEmployee/:id', deleteEmployee);
 router.get('/getArchivedEmployees', getArchivedEmployees);
 
-module.exports = router;
+export default router;
 
 
 

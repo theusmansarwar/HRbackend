@@ -1,5 +1,5 @@
-const e = require("express");
-const mongoose = require("mongoose");
+import express from "express";
+import mongoose from "mongoose";
 
 const employeeSchema = new mongoose.Schema(
   {
@@ -93,4 +93,4 @@ const employeeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 const Employee = mongoose.model("Employee", employeeSchema);
-module.exports = Employee;
+export default Employee;

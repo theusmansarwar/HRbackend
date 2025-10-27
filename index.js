@@ -1,38 +1,38 @@
-require('dotenv').config();
-const express=require("express");
-const app= express();
-const cors = require("cors");
-const connectDB= require("./utils/db");
-const employeeRouter=require('./Routes/employeeRouter');
-const departmentRouter=require('./Routes/departmentRouter');
-const designationRouter = require('./Routes/designationRouter');
-const attendanceRouter = require('./Routes/attendanceRouter');
-const leaveRouter = require('./Routes/leaveRouter');
-const jobRouter = require('./Routes/jobRouter');
-const reportsRouter = require('./Routes/reportsRouter');
-const applicationRouter = require('./Routes/applicationRouter');
-const payrollRouter = require('./Routes/payrollRouter');
-const performanceRouter = require('./Routes/performanceRouter');
-const trainingRouter = require('./Routes/trainingRouter');
-const userRouter = require('./Routes/userRouter');
-const roleRouter = require('./Routes/rolesRouter');
+import dotenv from "dotenv";
+dotenv.config();
+import express from "express";
+import cors from "cors";
+import connectDB from "./utils/db.js";
 
+import employeeRouter from "./Routes/employeeRouter.js";
+import departmentRouter from "./Routes/departmentRouter.js";
+import designationRouter from "./Routes/designationRouter.js";
+import attendanceRouter from "./Routes/attendanceRouter.js";
+import leaveRouter from "./Routes/leaveRouter.js";
+import jobRouter from "./Routes/jobRouter.js";
+import reportsRouter from "./Routes/reportsRouter.js";
+import applicationRouter from "./Routes/applicationRouter.js";
+import payrollRouter from "./Routes/payrollRouter.js";
+import performanceRouter from "./Routes/performanceRouter.js";
+import trainingRouter from "./Routes/trainingRouter.js";
+import userRouter from "./Routes/userRouter.js";
+import roleRouter from "./Routes/rolesRouter.js";
+import fineRouter from "./Routes/fineRouter.js";
+
+
+const app = express();
 const port = process.env.PORT || 5009;
 
- 
 app.use(express.json());
-app.use(cors({
-  origin: "*", 
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  
-}));
-// app.use(cors({
-//   origin: "http://localhost:3000",
-//   methods: ["GET", "POST", "PUT", "DELETE"],
-//   credentials: true
-// }));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  })
+);
 
-app.use("/employees" , employeeRouter);
+// Routes
+app.use("/employees", employeeRouter);
 app.use("/departments", departmentRouter);
 app.use("/designations", designationRouter);
 app.use("/attendance", attendanceRouter);
@@ -45,7 +45,7 @@ app.use("/training", trainingRouter);
 app.use("/reports", reportsRouter);
 app.use("/users", userRouter);
 app.use("/roles", roleRouter);
-app.use("/fines", require("./Routes/fineRouter"));
+app.use("/fines", fineRouter);
 
 connectDB().then(() => {
   app.listen(port, () => {

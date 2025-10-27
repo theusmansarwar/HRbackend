@@ -1,4 +1,5 @@
-const Designation = require("../Models/designationModel");
+import Designation from "../Models/designationModel.js";
+
 
 // CREATE DESIGNATION
 const createDesignation = async (req, res) => {
@@ -179,9 +180,9 @@ const deleteDesignation = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   createDesignation,
-  getDesignationList,
+  getDesignationList,  
   getArchivedDesignations,
   updateDesignation,
   deleteDesignation,

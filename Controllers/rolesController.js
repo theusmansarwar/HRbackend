@@ -1,4 +1,4 @@
-const Role = require("../Models/Roles.js");
+import Role from "../Models/Roles.js";
 
 // -------------------- CREATE ROLE --------------------
 const createRole = async (req, res) => {
@@ -134,7 +134,7 @@ const getRoleByName = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   createRole,
   getAllRoles,
   getRoleById,

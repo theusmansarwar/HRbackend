@@ -1,8 +1,9 @@
-const express = require("express");
+import express from "express";
+import { protect } from "../Middlewares/authMiddleware.js";
+import { verifyRole } from "../Middlewares/verifyRole.js";
+import * as usersController from "../Controllers/usersController.js";
 const router = express.Router();
-const { protect } = require("../Middlewares/authMiddleware");
-const verifyRole = require("../Middlewares/verifyRole");
-const usersController = require("../Controllers/usersController");
+
 
 // Public login
 router.post("/login", usersController.loginUser);
@@ -23,4 +24,4 @@ router.put("/updateUser/:id", protect, verifyRole(["HR"]), usersController.updat
 router.delete("/deleteUser/:id", protect, verifyRole(["HR"]), usersController.deleteUser);
 
 
-module.exports = router;
+export default router;

@@ -1,11 +1,11 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createFine,
   getFineList,
   updateFine,
   deleteFine,
-  getArchivedFines,
-} = require("../Controllers/fineController");
+  getArchivedFines
+} from "../Controllers/fineController.js";
 
 const router = express.Router();
 
@@ -16,4 +16,4 @@ router.put("/updateFine/:id", updateFine);
 router.delete("/deleteFine/:id", deleteFine);
 router.get("/getArchivedFines", getArchivedFines);
 
-module.exports = router;
+export default router;

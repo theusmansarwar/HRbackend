@@ -1,12 +1,12 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createLeave,
   getLeaveList,
   getLeaveById,
   updateLeave,
   deleteLeave,
   getArchivedLeaves
-} = require("../Controllers/leaveController");
+} from "../Controllers/leaveController.js";
 
 const router = express.Router();
 
@@ -17,4 +17,4 @@ router.put("/updateLeave/:id", updateLeave);
 router.delete("/deleteLeave/:id", deleteLeave);
 router.get("/getArchivedLeaves", getArchivedLeaves);
 
-module.exports = router;
+  export default router;

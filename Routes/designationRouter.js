@@ -1,11 +1,11 @@
-const express = require("express");
-const {
-  createDesignation,
+import express from "express";
+import {
+  createDesignation,  
   getDesignationList,
   getArchivedDesignations,
   updateDesignation,
   deleteDesignation,
-} = require("../Controllers/designationController");
+} from "../Controllers/designationController.js";
 
 const router = express.Router();
 
@@ -15,4 +15,4 @@ router.get("/getArchivedDesignations", getArchivedDesignations);
 router.put("/updateDesignation/:id", updateDesignation);
 router.delete("/deleteDesignation/:id", deleteDesignation);
 
-module.exports = router;
+export default router;

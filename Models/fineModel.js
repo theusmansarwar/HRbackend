@@ -1,22 +1,22 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const fineSchema = new mongoose.Schema(
   {
     fineId: {
       type: String,
       required: true,
-      unique: true, // Example: F001, F002
+      unique: true, 
       uppercase: true,
       trim: true,
     },
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Employee", // Relation with Employee model
+      ref: "Employee", 
       required: true,
     },
     fineType: {
       type: String,
-      required: true, // e.g. "Late Arrival", "Violation", etc.
+      required: true, 
       trim: true,
     },
     fineAmount: {
@@ -46,4 +46,4 @@ const fineSchema = new mongoose.Schema(
 );
 
 const Fine = mongoose.model("Fine", fineSchema);
-module.exports = Fine;
+export default Fine;

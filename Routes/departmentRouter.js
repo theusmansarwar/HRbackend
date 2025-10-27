@@ -1,11 +1,11 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createDepartment,
   getDepartmentList,
   updateDepartment,
   deleteDepartment,
-  getArchivedDepartments,
-} = require("../Controllers/departmentsController");
+  getArchivedDepartments
+} from "../Controllers/departmentsController.js";
 
 const router = express.Router();
 
@@ -15,5 +15,5 @@ router.put("/updateDepartment/:id", updateDepartment);
 router.delete("/deleteDepartment/:id", deleteDepartment);
 router.get("/getArchivedDepartments", getArchivedDepartments);
 
-module.exports = router;
+export default router;
 

@@ -1,12 +1,12 @@
-const express = require("express");
-const {
-  createTraining,
+import express from "express";
+import {
+  createTraining, 
   getTrainingList,
   getTrainingById,
   updateTraining,
   deleteTraining,
-  getArchivedTrainings,
-} = require("../Controllers/trainingController");
+  getArchivedTrainings
+} from "../Controllers/trainingController.js";
 
 const router = express.Router();
 
@@ -17,4 +17,4 @@ router.put("/updateTraining/:id", updateTraining);
 router.delete("/deleteTraining/:id", deleteTraining);
 router.get("/getArchivedTrainings", getArchivedTrainings);
 
-module.exports = router;
+export default router;

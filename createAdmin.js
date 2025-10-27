@@ -1,8 +1,10 @@
 // createAdmin.js
-require("dotenv").config();
-const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
-const User = require("./Models/User");
+import dotenv from "dotenv";
+dotenv.config();
+
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+import User from "./Models/User.js";
 
 // MongoDB connection
 const connectDB = async () => {
@@ -49,3 +51,4 @@ const run = async () => {
 };
 
 run();
+
