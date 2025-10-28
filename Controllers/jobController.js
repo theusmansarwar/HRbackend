@@ -1,6 +1,6 @@
 import Job from "../Models/jobModel.js";
 
-// CREATE JOB
+ 
 export const createJob = async (req, res) => {
   try {
     const {
@@ -14,31 +14,55 @@ export const createJob = async (req, res) => {
       expiryDate,
     } = req.body;
 
-    // VALIDATIONS
-    if (!jobTitle)
-      return res.status(400).json({ error: "Job Title is required" });
-    if (!jobDescription)
-      return res.status(400).json({ error: "Job Description is required" });
-    if (!departmentId)
-      return res.status(400).json({ error: "DepartmentId is required" });
-    if (!designationId)
-      return res.status(400).json({ error: "DesignationId is required" });
-    if (!status) return res.status(400).json({ error: "Status is required" });
-    if (!postingDate)
-      return res.status(400).json({ error: "Posting Date is required" });
-    if (!expiryDate)
-      return res.status(400).json({ error: "Expiry Date is required" });
+    const missingFields = [];
 
-    //  Generate unique jobId like "JOB-0001"
+    if (!jobTitle)
+      missingFields.push({ name: "jobTitle", message: "Job Title is required" });
+    if (!jobDescription)
+      missingFields.push({
+        name: "jobDescription",
+        message: "Job Description is required",
+      });
+    if (!departmentId)
+      missingFields.push({
+        name: "departmentId",
+        message: "Department is required",
+      });
+    if (!designationId)
+      missingFields.push({
+        name: "designationId",
+        message: "Designation is required",
+      });
+    if (!status)
+      missingFields.push({ name: "status", message: "Status is required" });
+    if (!postingDate)
+      missingFields.push({
+        name: "postingDate",
+        message: "Posting Date is required",
+      });
+    if (!expiryDate)
+      missingFields.push({
+        name: "expiryDate",
+        message: "Expiry Date is required",
+      });
+ 
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Validation failed. Some fields are missing.",
+        missingFields,
+      });
+    }
+
+   
     const lastJob = await Job.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
-    if (lastJob && lastJob.jobId) {
+    if (lastJob?.jobId) {
       const lastNumber = parseInt(lastJob.jobId.split("-")[1]);
       newIdNumber = lastNumber + 1;
     }
     const jobId = `JOB-${newIdNumber.toString().padStart(4, "0")}`;
-
-    // Create new job
+ 
     const job = await Job.create({
       jobId,
       jobTitle,
@@ -53,18 +77,117 @@ export const createJob = async (req, res) => {
 
     return res.status(201).json({
       status: 201,
-      message: "Job created successfully",
+      message: "Job created successfully ",
       data: job,
     });
   } catch (error) {
     return res.status(500).json({
       status: 500,
-      message: "Something went wrong while creating job",
+      message: "Server error while creating job",
       details: error.message,
     });
   }
 };
-// READ ACTIVE JOB LIST (with pagination + populate)
+
+ 
+export const updateJob = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      jobTitle,
+      jobDescription,
+      departmentId,
+      designationId,
+      postedBy,
+      status,
+      postingDate,
+      expiryDate,
+    } = req.body;
+
+    const missingFields = [];
+
+     if (!jobTitle?.trim())
+  missingFields.push({ name: "jobTitle", message: "Job Title is required" });
+
+if (!jobDescription?.trim())
+  missingFields.push({
+    name: "jobDescription",
+    message: "Job Description is required",
+  });
+
+if (!departmentId?.trim())
+  missingFields.push({
+    name: "departmentId",
+    message: "Department is required",
+  });
+
+if (!designationId?.trim())
+  missingFields.push({
+    name: "designationId",
+    message: "Designation is required",
+  });
+
+if (!status?.trim())
+  missingFields.push({ name: "status", message: "Status is required" });
+
+if (!postingDate?.trim())
+  missingFields.push({
+    name: "postingDate",
+    message: "Posting Date is required",
+  });
+
+if (!expiryDate?.trim())
+  missingFields.push({
+    name: "expiryDate",
+    message: "Expiry Date is required",
+  });
+
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Validation failed. Some fields are missing.",
+        missingFields,
+      });
+    }
+
+    const updatedJob = await Job.findByIdAndUpdate(
+      id,
+      {
+        jobTitle,
+        jobDescription,
+        departmentId,
+        designationId,
+        postedBy,
+        status,
+        postingDate,
+        expiryDate,
+      },
+      { new: true }
+    )
+      .populate("departmentId")
+      .populate("designationId");
+
+    if (!updatedJob) {
+      return res.status(404).json({
+        status: 404,
+        message: "Job not found",
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      message: "Job updated successfully ",
+      data: updatedJob,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while updating job",
+      details: error.message,
+    });
+  }
+};
 export const getJobList = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -97,7 +220,7 @@ export const getJobList = async (req, res) => {
   }
 };
 
-// READ ARCHIVED JOB LIST (with pagination + populate)
+ 
 export const getArchivedJobs = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -124,7 +247,7 @@ export const getArchivedJobs = async (req, res) => {
   }
 };
 
-// GET SINGLE JOB BY ID (with populate)
+ 
 export const getJobById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -146,63 +269,9 @@ export const getJobById = async (req, res) => {
   }
 };
 
-// UPDATE JOB
-export const updateJob = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      jobTitle,
-      jobDescription,
-      departmentId,
-      designationId,
-      postedBy,
-      status,
-      postingDate,
-      expiryDate,
-    } = req.body;
+ 
 
-    // VALIDATIONS
-    if (!jobTitle) return res.json({ error: "Job Title is required" });
-    if (!jobDescription)
-      return res.json({ error: "Job Description is required" });
-    if (!departmentId) return res.json({ error: "DepartmentId is required" });
-    if (!designationId) return res.json({ error: "DesignationId is required" });
-    if (!status) return res.json({ error: "Status is required" });
-    if (!postingDate) return res.json({ error: "Posting Date is required" });
-    if (!expiryDate) return res.json({ error: "Expiry Date is required" });
-
-    const updatedJob = await Job.findByIdAndUpdate(
-      id,
-      {
-        jobTitle,
-        jobDescription,
-        departmentId,
-        designationId,
-        postedBy,
-        status,
-        postingDate,
-        expiryDate,
-      },
-      { new: true }
-    )
-      .populate("departmentId")
-      .populate("designationId");
-
-    if (!updatedJob) {
-      return res.status(404).json({ error: "Job not found" });
-    }
-
-    return res.json({
-      status: 200,
-      message: "Job updated successfully",
-      data: updatedJob,
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// SOFT DELETE JOB
+ 
 export const deleteJob = async (req, res) => {
   try {
     const { id } = req.params;

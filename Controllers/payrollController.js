@@ -1,6 +1,10 @@
 import Payroll from "../Models/payrollModel.js";
 
+ 
+
+// =============================
 // CREATE PAYROLL
+// =============================
 export const createPayroll = async (req, res) => {
   try {
     const {
@@ -18,38 +22,64 @@ export const createPayroll = async (req, res) => {
       status,
     } = req.body;
 
-    // VALIDATIONS
+    // 1️⃣ Manual Validation
+    const missingFields = [];
+
     if (!employeeId)
-      return res.status(400).json({ error: "Employee ID is required" });
-    if (basicSalary === undefined)
-      return res.status(400).json({ error: "Basic Salary is required" });
-    if (netSalary === undefined)
-      return res.status(400).json({ error: "Net Salary is required" });
+      missingFields.push({ name: "employeeId", message: "Employee is required" });
+    if (basicSalary === undefined || basicSalary === "")
+      missingFields.push({ name: "basicSalary", message: "Basic Salary is required" });
+    if (allowances === undefined || allowances === "")
+      missingFields.push({ name: "allowances", message: "Allowances are required" });
+    if (deductions === undefined || deductions === "")
+      missingFields.push({ name: "deductions", message: "Deductions are required" });
+    if (overtime === undefined || overtime === "")
+      missingFields.push({ name: "overtime", message: "Overtime is required" });
+    if (bonuses === undefined || bonuses === "")
+      missingFields.push({ name: "bonuses", message: "Bonuses are required" });
+    if (netSalary === undefined || netSalary === "")
+      missingFields.push({ name: "netSalary", message: "Net Salary is required" });
     if (!paymentMethod)
-      return res.status(400).json({ error: "Payment Method is required" });
+      missingFields.push({ name: "paymentMethod", message: "Payment Method is required" });
     if (!month)
-      return res.status(400).json({ error: "Month is required" });
+      missingFields.push({ name: "month", message: "Month is required" });
     if (!year)
-      return res.status(400).json({ error: "Year is required" });
+      missingFields.push({ name: "year", message: "Year is required" });
 
-    // Prevent duplicate payroll for same employee/month/year
-    const exists = await Payroll.findOne({ employeeId, month, year, isArchived: false });
-    if (exists)
+    if (missingFields.length > 0) {
       return res.status(400).json({
-        error: "Payroll already exists for this employee for the given month and year",
+        status: 400,
+        message: "Validation failed. Missing required fields.",
+        missingFields,
       });
+    }
 
-    // Auto-generate payrollId like PAYROLL-0001
+    // 2️⃣ Prevent duplicate payroll
+    const exists = await Payroll.findOne({ employeeId, month, year, isArchived: false });
+    if (exists) {
+      return res.status(400).json({
+        status: 400,
+        message: "Duplicate payroll entry",
+        missingFields: [
+          {
+            name: "month",
+            message: "Payroll already exists for this employee for the given month and year",
+          },
+        ],
+      });
+    }
+
+    // 3️⃣ Auto-generate payrollId
     const lastPayroll = await Payroll.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
-    if (lastPayroll && lastPayroll.payrollId) {
+    if (lastPayroll?.payrollId) {
       const lastNumber = parseInt(lastPayroll.payrollId.split("-")[1]);
-      newIdNumber = lastNumber + 1;
+      if (!isNaN(lastNumber)) newIdNumber = lastNumber + 1;
     }
     const payrollId = `PAYROLL-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // CREATE
-    const payroll = await Payroll.create({
+    // 4️⃣ Create Payroll
+    const payroll = new Payroll({
       payrollId,
       employeeId,
       basicSalary,
@@ -65,19 +95,118 @@ export const createPayroll = async (req, res) => {
       status,
     });
 
+    await payroll.save();
+
     return res.status(201).json({
       status: 201,
-      message: "Payroll created successfully",
+      message: "Payroll created successfully ✅",
       data: payroll,
     });
   } catch (error) {
+    console.error("Error creating payroll:", error);
     return res.status(500).json({
       status: 500,
-      message: "Something went wrong while creating payroll",
-      details: error.message,
+      message: "Server error while creating payroll",
     });
   }
 };
+
+// =============================
+// UPDATE PAYROLL
+// =============================
+export const updatePayroll = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      employeeId,
+      basicSalary,
+      allowances,
+      deductions,
+      overtime,
+      bonuses,
+      netSalary,
+      paymentDate,
+      paymentMethod,
+      month,
+      year,
+      status,
+    } = req.body;
+
+    // 1️⃣ Manual Validation
+    const missingFields = [];
+
+    if (!employeeId)
+      missingFields.push({ name: "employeeId", message: "Employee is required" });
+    if (basicSalary === undefined || basicSalary === "")
+      missingFields.push({ name: "basicSalary", message: "Basic Salary is required" });
+    if (allowances === undefined || allowances === "")
+      missingFields.push({ name: "allowances", message: "Allowances are required" });
+    if (deductions === undefined || deductions === "")
+      missingFields.push({ name: "deductions", message: "Deductions are required" });
+    if (overtime === undefined || overtime === "")
+      missingFields.push({ name: "overtime", message: "Overtime is required" });
+    if (bonuses === undefined || bonuses === "")
+      missingFields.push({ name: "bonuses", message: "Bonuses are required" });
+    if (netSalary === undefined || netSalary === "")
+      missingFields.push({ name: "netSalary", message: "Net Salary is required" });
+    if (!paymentMethod)
+      missingFields.push({ name: "paymentMethod", message: "Payment Method is required" });
+    if (!month)
+      missingFields.push({ name: "month", message: "Month is required" });
+    if (!year)
+      missingFields.push({ name: "year", message: "Year is required" });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Validation failed. Missing required fields.",
+        missingFields,
+      });
+    }
+
+    // 2️⃣ Find payroll
+    const payroll = await Payroll.findById(id);
+    if (!payroll) {
+      return res.status(404).json({
+        status: 404,
+        message: "Payroll not found",
+      });
+    }
+
+    // 3️⃣ Update fields
+    Object.assign(payroll, {
+      employeeId,
+      basicSalary,
+      allowances,
+      deductions,
+      overtime,
+      bonuses,
+      netSalary,
+      paymentDate,
+      paymentMethod,
+      month,
+      year,
+      status: status || "Pending",
+    });
+
+    // 4️⃣ Save
+    const updatedPayroll = await payroll.save();
+
+    return res.status(200).json({
+      status: 200,
+      message: "Payroll updated successfully ✅",
+      data: updatedPayroll,
+    });
+  } catch (error) {
+    console.error("Error updating payroll:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while updating payroll",
+    });
+  }
+};
+
+
 
 // READ ACTIVE PAYROLLS (with pagination)
 export const getPayrollList = async (req, res) => {
@@ -178,70 +307,6 @@ export const getPayrollById = async (req, res) => {
   }
 };
 
-// UPDATE PAYROLL
-export const updatePayroll = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      employeeId,
-      basicSalary,
-      allowances,
-      deductions,
-      overtime,
-      bonuses,
-      netSalary,
-      paymentDate,
-      paymentMethod,
-      month,
-      year,
-      status,
-    } = req.body;
-
-    // VALIDATIONS
-    if (!employeeId)
-      return res.status(400).json({ error: "Employee ID is required" });
-    if (basicSalary === undefined)
-      return res.status(400).json({ error: "Basic Salary is required" });
-    if (netSalary === undefined)
-      return res.status(400).json({ error: "Net Salary is required" });
-    if (!paymentMethod)
-      return res.status(400).json({ error: "Payment Method is required" });
-    if (!month)
-      return res.status(400).json({ error: "Month is required" });
-    if (!year)
-      return res.status(400).json({ error: "Year is required" });
-
-    const updatedPayroll = await Payroll.findByIdAndUpdate(
-      id,
-      {
-        employeeId,
-        basicSalary,
-        allowances,
-        deductions,
-        overtime,
-        bonuses,
-        netSalary,
-        paymentDate,
-        paymentMethod,
-        month,
-        year,
-        status,
-      },
-      { new: true }
-    ).populate("employeeId", "firstName lastName");
-
-    if (!updatedPayroll) {
-      return res.status(404).json({ error: "Payroll not found" });
-    }
-
-    return res.status(200).json({
-      message: "Payroll updated successfully",
-      data: updatedPayroll,
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
 
 // SOFT DELETE PAYROLL
 export const deletePayroll = async (req, res) => {

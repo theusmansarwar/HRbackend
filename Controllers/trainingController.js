@@ -1,20 +1,51 @@
 import Training from "../Models/trainingModel.js";
 
+
+// CREATE TRAINING
 export const createTraining = async (req, res) => {
   try {
     const { employeeId, trainingName, startDate, endDate, status } = req.body;
     const certificate = req.file?.filename || null;
 
-    // VALIDATIONS
-    if (!employeeId)
-      return res.status(400).json({ error: "EmployeeId is required" });
-    if (!trainingName)
-      return res.status(400).json({ error: "Training Name is required" });
-    if (!startDate)
-      return res.status(400).json({ error: "Start Date is required" });
-    if (!endDate)
-      return res.status(400).json({ error: "End Date is required" });
-    if (!status) return res.status(400).json({ error: "Status is required" });
+    const missingFields = [];
+
+    if (!employeeId?.trim())
+      missingFields.push({
+        name: "employeeId",
+        message: "Employee is required",
+      });
+
+    if (!trainingName?.trim())
+      missingFields.push({
+        name: "trainingName",
+        message: "Training Name is required",
+      });
+
+    if (!startDate?.trim())
+      missingFields.push({
+        name: "startDate",
+        message: "Start Date is required",
+      });
+
+    if (!endDate?.trim())
+      missingFields.push({
+        name: "endDate",
+        message: "End Date is required",
+      });
+
+    if (!status?.trim())
+      missingFields.push({
+        name: "status",
+        message: "Status is required",
+      });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Validation failed. Please fill all required fields.",
+        missingFields,
+      });
+    }
 
     const lastTraining = await Training.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
@@ -36,17 +67,105 @@ export const createTraining = async (req, res) => {
 
     return res.status(201).json({
       status: 201,
-      message: "Training created successfully",
+      message: "Training created successfully ✅",
       data: newTraining,
     });
   } catch (error) {
     return res.status(500).json({
       status: 500,
-      message: "Something went wrong while creating training",
+      message: "Server error while creating training",
       details: error.message,
     });
   }
 };
+
+// UPDATE TRAINING
+export const updateTraining = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { employeeId, trainingName, startDate, endDate, status, archive } = req.body;
+
+    const missingFields = [];
+
+    if (!employeeId?.trim())
+      missingFields.push({
+        name: "employeeId",
+        message: "Employee is required",
+      });
+
+    if (!trainingName?.trim())
+      missingFields.push({
+        name: "trainingName",
+        message: "Training Name is required",
+      });
+
+    if (!startDate?.trim())
+      missingFields.push({
+        name: "startDate",
+        message: "Start Date is required",
+      });
+
+    if (!endDate?.trim())
+      missingFields.push({
+        name: "endDate",
+        message: "End Date is required",
+      });
+
+    if (!status?.trim())
+      missingFields.push({
+        name: "status",
+        message: "Status is required",
+      });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Validation failed. Please fill all required fields.",
+        missingFields,
+      });
+    }
+
+    const certificate = req.file
+      ? req.file.filename
+      : req.body.certificate || null;
+
+    const updatedTraining = await Training.findByIdAndUpdate(
+      id,
+      {
+        employeeId,
+        trainingName,
+        startDate,
+        endDate,
+        status,
+        archive,
+        certificate,
+      },
+      { new: true }
+    ).populate("employeeId", "firstName lastName employeeId");
+
+    if (!updatedTraining) {
+      return res.status(404).json({
+        status: 404,
+        message: "Training not found",
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      message: "Training updated successfully ✅",
+      data: updatedTraining,
+    });
+  } catch (error) {
+    console.log("Update Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while updating training",
+      details: error.message,
+    });
+  }
+};
+
+
 
  export const getTrainingList = async (req, res) => {
   try {
@@ -144,63 +263,7 @@ export const getTrainingById = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
-export const updateTraining = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Handle both text fields and optional file
-    const {
-      employeeId,
-      trainingName,
-      startDate,
-      endDate,
-      status,
-      archive,
-    } = req.body;
-
-    if (!employeeId)
-      return res.status(400).json({ error: "EmployeeId is required" });
-    if (!trainingName)
-      return res.status(400).json({ error: "Training Name is required" });
-    if (!startDate)
-      return res.status(400).json({ error: "Start Date is required" });
-    if (!endDate)
-      return res.status(400).json({ error: "End Date is required" });
-    if (!status)
-      return res.status(400).json({ error: "Status is required" });
-
-    // Handle certificate (file or existing)
-    const certificate = req.file
-      ? req.file.filename
-      : req.body.certificate || null;
-
-    const updatedTraining = await Training.findByIdAndUpdate(
-      id,
-      {
-        employeeId,
-        trainingName,
-        startDate,
-        endDate,
-        status,
-        archive,
-        certificate,
-      },
-      { new: true }
-    ).populate("employeeId", "firstName lastName employeeId");
-
-    if (!updatedTraining)
-      return res.status(404).json({ error: "Training not found" });
-
-    return res.status(200).json({
-      message: "Training updated successfully",
-      data: updatedTraining,
-    });
-  } catch (error) {
-    console.log("Update Error:", error);
-    return res.status(500).json({ error: error.message });
-  }
-};
+ 
 
 export const deleteTraining = async (req, res) => {
   try {

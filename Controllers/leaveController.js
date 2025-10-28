@@ -1,38 +1,53 @@
 import Leave from "../Models/leaveModel.js";
-
-// CREATE LEAVE
+ 
 export const createLeave = async (req, res) => {
   try {
     const { employeeId, leaveType, startDate, endDate, status } = req.body;
 
-    // VALIDATIONS
-    if (!employeeId) return res.status(400).json({ error: "Employee ID is required" });
-    if (!leaveType) return res.status(400).json({ error: "Leave Type is required" });
-    if (!startDate) return res.status(400).json({ error: "Start Date is required" });
-    if (!endDate) return res.status(400).json({ error: "End Date is required" });
-    if (!status) return res.status(400).json({ error: "Status is required" });
+    const missingFields = [];
 
-    // CHECK DUPLICATE LEAVE
-    const leaveExists = await Leave.findOne({
+    if (!employeeId)
+      missingFields.push({ name: "employeeId", message: "Employee is required" });
+    if (!leaveType)
+      missingFields.push({ name: "leaveType", message: "Leave type is required" });
+    if (!startDate)
+      missingFields.push({ name: "startDate", message: "Start date is required" });
+    if (!endDate)
+      missingFields.push({ name: "endDate", message: "End date is required" });
+    if (!status)
+      missingFields.push({ name: "status", message: "Status is required" });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
+    }
+
+    const existingLeave = await Leave.findOne({
       employeeId,
       leaveType,
       startDate,
       endDate,
       archive: false,
     });
-    if (leaveExists) return res.status(400).json({ error: "Leave already exists for this period" });
+    if (existingLeave) {
+      return res.status(400).json({
+        status: 400,
+        message: "Duplicate leave found for this employee and period",
+      });
+    }
 
-    // GENERATE UNIQUE LEAVE ID
     const lastLeave = await Leave.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
-    if (lastLeave && lastLeave.leaveId) {
+    if (lastLeave?.leaveId) {
       const lastNumber = parseInt(lastLeave.leaveId.split("-")[1]);
-      newIdNumber = lastNumber + 1;
+      if (!isNaN(lastNumber)) newIdNumber = lastNumber + 1;
     }
     const leaveId = `LEAVE-${newIdNumber.toString().padStart(4, "0")}`;
-
-    // CREATE LEAVE
-    const leaveCreated = await Leave.create({
+ 
+    const leave = new Leave({
       leaveId,
       employeeId,
       leaveType,
@@ -41,45 +56,93 @@ export const createLeave = async (req, res) => {
       status,
     });
 
+    await leave.save();
+
     return res.status(201).json({
       status: 201,
-      message: "Leave created successfully",
-      data: leaveCreated,
+      message: "Leave created successfully ✅",
+      data: leave,
     });
   } catch (error) {
+    console.error("Error creating leave:", error);
     return res.status(500).json({
       status: 500,
-      message: "Something went wrong while creating leave",
-      details: error.message,
+      message: "Server error while creating leave",
     });
   }
 };
 
-// READ ACTIVE LEAVES (with pagination + populate)
-// export const getLeaveList = async (req, res) => {
-//   try {
-//     const { page = 1, limit = 10 } = req.query;
-//     const skip = (page - 1) * limit;
+export const updateLeave = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { employeeId, leaveType, startDate, endDate, status } = req.body;
 
-//     const leaves = await Leave.find({ isArchived: false })
-//       .populate("employeeId", "firstName lastName email")
-//       .sort({ createdAt: -1 })
-//       .skip(parseInt(skip))
-//       .limit(parseInt(limit));
+    const missingFields = [];
 
-//     const total = await Leave.countDocuments({ isArchived: false });
+    if (!employeeId)
+      missingFields.push({ name: "employeeId", message: "Employee is required" });
+    if (!leaveType)
+      missingFields.push({ name: "leaveType", message: "Leave type is required" });
+    if (!startDate)
+      missingFields.push({ name: "startDate", message: "Start date is required" });
+    if (!endDate)
+      missingFields.push({ name: "endDate", message: "End date is required" });
+    if (!status)
+      missingFields.push({ name: "status", message: "Status is required" });
 
-//     return res.status(200).json({
-//       message: "Active leaves fetched",
-//       total,
-//       page: parseInt(page),
-//       limit: parseInt(limit),
-//       data: leaves,
-//     });
-//   } catch (error) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
+    }
+
+    const leave = await Leave.findById(id);
+    if (!leave) {
+      return res.status(404).json({
+        status: 404,
+        message: "Leave not found",
+      });
+    }
+
+    leave.employeeId = employeeId;
+    leave.leaveType = leaveType;
+    leave.startDate = new Date(startDate);
+    leave.endDate = new Date(endDate);
+    leave.status = status;
+
+    const updatedLeave = await leave.save();
+
+    return res.status(200).json({
+      status: 200,
+      message: "Leave updated successfully ✅",
+      data: updatedLeave,
+    });
+  } catch (error) {
+    console.error("Error updating leave:", error);
+
+    if (error.name === "ValidationError") {
+      const missingFields = Object.keys(error.errors).map((key) => ({
+        name: key,
+        message: `${key.charAt(0).toUpperCase() + key.slice(1)} is required`,
+      }));
+
+      return res.status(400).json({
+        status: 400,
+        message: "Validation failed",
+        missingFields,
+      });
+    }
+
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while updating leave",
+    });
+  }
+};
+
+
 export const getLeaveList = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -124,7 +187,7 @@ export const getLeaveList = async (req, res) => {
 };
 
 
-// READ ARCHIVED LEAVES (with pagination + populate)
+ 
 export const getArchivedLeaves = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -150,7 +213,7 @@ export const getArchivedLeaves = async (req, res) => {
   }
 };
 
-// GET SINGLE LEAVE BY ID (with populate)
+ 
 export const getLeaveById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -167,38 +230,9 @@ export const getLeaveById = async (req, res) => {
   }
 };
 
-// UPDATE LEAVE
-export const updateLeave = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { employeeId, leaveType, startDate, endDate, status } = req.body;
 
-    // VALIDATIONS
-    if (!employeeId) return res.status(400).json({ error: "Employee ID is required" });
-    if (!leaveType) return res.status(400).json({ error: "Leave Type is required" });
-    if (!startDate) return res.status(400).json({ error: "Start Date is required" });
-    if (!endDate) return res.status(400).json({ error: "End Date is required" });
-    if (!status) return res.status(400).json({ error: "Status is required" });
 
-    const updatedLeave = await Leave.findByIdAndUpdate(
-      id,
-      { employeeId, leaveType, startDate, endDate, status },
-      { new: true }
-    ).populate("employeeId", "firstName lastName email");
-
-    if (!updatedLeave) return res.status(404).json({ error: "Leave not found" });
-
-    return res.status(200).json({
-      status: 200,
-      message: "Leave updated successfully",
-      data: updatedLeave,
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// SOFT DELETE LEAVE
+ 
 export const deleteLeave = async (req, res) => {
   try {
     const { id } = req.params;
