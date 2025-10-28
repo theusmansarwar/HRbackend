@@ -4,20 +4,26 @@ import Department from "../Models/departmentModel.js";
 // CREATE DEPARTMENT
 export const createDepartment = async (req, res) => {
   try {
-    const {
-      departmentName,
-      headOfDepartment,
-      status,
-      archiveDepartment,
-    } = req.body;
+    const { departmentName, headOfDepartment, status, archiveDepartment } = req.body;
 
-    // VALIDATIONS
+    const missingFields = [];
+
+    // ✅ VALIDATIONS
     if (!departmentName)
-      return res.status(400).json({ error: "Department Name is required" });
-    if (!headOfDepartment)
-      return res.status(400).json({ error: "Head of Department is required" });
+      missingFields.push({ name: "departmentName", message: "Department Name is required" });
 
-    // Generate auto-increment Department ID: "DEPT-0001"
+    if (!headOfDepartment)
+      missingFields.push({ name: "headOfDepartment", message: "Head of Department is required" });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
+    }
+
+    // ✅ AUTO-ID GENERATION
     const lastDept = await Department.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     if (lastDept && lastDept.departmentId) {
@@ -26,7 +32,7 @@ export const createDepartment = async (req, res) => {
     }
     const departmentId = `DEPT-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // CREATE NEW DEPARTMENT
+    // ✅ CREATE NEW DEPARTMENT
     const department = await Department.create({
       departmentId,
       departmentName,
@@ -41,6 +47,7 @@ export const createDepartment = async (req, res) => {
       data: department,
     });
   } catch (error) {
+    console.error("Create Department Error:", error);
     return res.status(500).json({
       status: 500,
       message: "Something went wrong while creating department",
@@ -77,8 +84,6 @@ export const getDepartmentList = async (req, res) => {
     });
   }
 };
-
-
 
 // GET ARCHIVED DEPARTMENTS
 export const getArchivedDepartments = async (req, res) => {
@@ -127,18 +132,26 @@ export const getDepartmentById = async (req, res) => {
 export const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      departmentName,
-      headOfDepartment,
-      status,
-      archiveDepartment,
-    } = req.body;
+    const { departmentName, headOfDepartment, status, archiveDepartment } = req.body;
 
+    const missingFields = [];
+
+    // ✅ VALIDATIONS
     if (!departmentName)
-      return res.json({ error: "Department Name is required" });
-    if (!headOfDepartment)
-      return res.json({ error: "Head of Department is required" });
+      missingFields.push({ name: "departmentName", message: "Department Name is required" });
 
+    if (!headOfDepartment)
+      missingFields.push({ name: "headOfDepartment", message: "Head of Department is required" });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
+    }
+
+    // ✅ UPDATE DEPARTMENT
     const updated = await Department.findByIdAndUpdate(
       id,
       {
@@ -150,16 +163,25 @@ export const updateDepartment = async (req, res) => {
       { new: true }
     );
 
-    if (!updated)
-      return res.status(404).json({ error: "Department not found" });
+    if (!updated) {
+      return res.status(404).json({
+        status: 404,
+        message: "Department not found",
+      });
+    }
 
-    return res.json({
+    return res.status(200).json({
       status: 200,
       message: "Department updated successfully",
       data: updated,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Update Department Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Something went wrong while updating department",
+      details: error.message,
+    });
   }
 };
 

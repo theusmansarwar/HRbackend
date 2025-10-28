@@ -1,21 +1,36 @@
 import Designation from "../Models/designationModel.js";
 
-const createDesignation = async (req, res) => {
+export const createDesignation = async (req, res) => {
   try {
     const { designationName, departmentId, status } = req.body;
 
-    // ✅ Collect missing fields
-    const requiredFields = ["designationName", "departmentId", "status"];
-    const missingFields = requiredFields.filter((field) => !req.body[field]);
+    // ✅ Collect missing fields with messages
+    const missingFields = [];
+    if (!designationName)
+      missingFields.push({
+        name: "designationName",
+        message: "Designation Name is required",
+      });
+    if (!departmentId)
+      missingFields.push({
+        name: "departmentId",
+        message: "Department selection is required",
+      });
+    if (!status)
+      missingFields.push({
+        name: "status",
+        message: "Status is required",
+      });
 
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
-        error: "Missing required fields",
+        message: "Missing required fields",
         missingFields,
       });
     }
 
+    // ✅ Duplicate check
     const existingDesignation = await Designation.findOne({
       designationName,
       departmentId,
@@ -23,12 +38,21 @@ const createDesignation = async (req, res) => {
     });
 
     if (existingDesignation) {
-      return res.status(400).json({ error: "Designation already exists" });
+      return res.status(400).json({
+        status: 400,
+        message: "Duplicate entry",
+        missingFields: [
+          {
+            name: "designationName",
+            message: "This designation already exists in the selected department",
+          },
+        ],
+      });
     }
 
+    // ✅ Auto-generate ID: DSG-0001
     const lastDesignation = await Designation.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
-
     if (lastDesignation && lastDesignation.designationId) {
       const lastNumber = parseInt(lastDesignation.designationId.split("-")[1]);
       if (!isNaN(lastNumber)) newIdNumber = lastNumber + 1;
@@ -36,6 +60,7 @@ const createDesignation = async (req, res) => {
 
     const designationId = `DSG-${newIdNumber.toString().padStart(4, "0")}`;
 
+    // ✅ Create new record
     const designation = await Designation.create({
       designationId,
       designationName,
@@ -58,6 +83,7 @@ const createDesignation = async (req, res) => {
     });
   }
 };
+
 
 const getDesignationList = async (req, res) => {
   try {
@@ -123,29 +149,48 @@ const getArchivedDesignations = async (req, res) => {
   }
 };
 
-const updateDesignation = async (req, res) => {
+export const updateDesignation = async (req, res) => {
   try {
     const { id } = req.params;
-    const designation = await Designation.findById(id);
+    const { designationName, departmentId, status } = req.body;
 
+    // ✅ Check if exists
+    const designation = await Designation.findById(id);
     if (!designation) {
-      return res.status(404).json({ error: "Designation not found" });
+      return res.status(404).json({
+        status: 404,
+        message: "Designation not found",
+      });
     }
 
-    // ✅ Check for missing fields
-    const requiredFields = ["designationName", "departmentId", "status"];
-    const missingFields = requiredFields.filter((field) => !req.body[field]);
+    // ✅ Validate missing fields
+    const missingFields = [];
+    if (!designationName)
+      missingFields.push({
+        name: "designationName",
+        message: "Designation Name is required",
+      });
+    if (!departmentId)
+      missingFields.push({
+        name: "departmentId",
+        message: "Department selection is required",
+      });
+    if (!status)
+      missingFields.push({
+        name: "status",
+        message: "Status is required",
+      });
 
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
-        error: "Missing required fields",
+        message: "Missing required fields",
         missingFields,
       });
     }
 
+    // ✅ Update data
     Object.assign(designation, req.body, { updatedDate: new Date() });
-
     const updatedDesignation = await designation.save();
 
     return res.status(200).json({
@@ -155,9 +200,14 @@ const updateDesignation = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating designation:", error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({
+      status: 500,
+      message: "Something went wrong while updating designation",
+      details: error.message,
+    });
   }
 };
+
 
 const deleteDesignation = async (req, res) => {
   try {
@@ -180,9 +230,7 @@ const deleteDesignation = async (req, res) => {
 };
 
 export {
-  createDesignation,
   getDesignationList,
   getArchivedDesignations,
-  updateDesignation,
   deleteDesignation,
 };

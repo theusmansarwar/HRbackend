@@ -42,16 +42,41 @@ const createEmployee = async (req, res) => {
       "emergencyContactNo",
     ];
 
-    for (const field of requiredFields) {
+    const missingFields = [];
+
+    requiredFields.forEach((field) => {
       if (!req.body[field]) {
-        return res.status(400).json({ error: `${field} is required` });
+        const formattedName =
+          field.charAt(0).toUpperCase() +
+          field.slice(1).replace(/([A-Z])/g, " $1");
+        missingFields.push({
+          name: field,
+          message: `${formattedName} is required`,
+        });
       }
+    });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
     }
 
     // ✅ Check if email already exists
     const existingEmployee = await Employee.findOne({ email, isArchived: false });
     if (existingEmployee) {
-      return res.status(400).json({ error: "Employee already exists" });
+      return res.status(400).json({
+        status: 400,
+        message: "Validation error",
+        missingFields: [
+          {
+            name: "email",
+            message: "Employee with this email already exists",
+          },
+        ],
+      });
     }
 
     // ✅ Generate unique employeeId like "EMP-0001"
@@ -198,7 +223,12 @@ const updateEmployee = async (req, res) => {
     const { id } = req.params;
     const employee = await Employee.findById(id);
 
-    if (!employee) return res.status(404).json({ error: "Employee not found" });
+    if (!employee) {
+      return res.status(404).json({
+        status: 404,
+        message: "Employee not found",
+      });
+    }
 
     const requiredFields = [
       "firstName",
@@ -219,8 +249,26 @@ const updateEmployee = async (req, res) => {
       "emergencyContactNo",
     ];
 
-    for (const field of requiredFields) {
-      if (!req.body[field]) return res.status(400).json({ error: `${field} is required` });
+    const missingFields = [];
+
+    requiredFields.forEach((field) => {
+      if (!req.body[field]) {
+        const formattedName =
+          field.charAt(0).toUpperCase() +
+          field.slice(1).replace(/([A-Z])/g, " $1");
+        missingFields.push({
+          name: field,
+          message: `${formattedName} is required`,
+        });
+      }
+    });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
     }
 
     Object.assign(employee, req.body);
@@ -232,10 +280,14 @@ const updateEmployee = async (req, res) => {
       data: updatedEmployee,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error updating employee:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Something went wrong while updating employee",
+      details: error.message,
+    });
   }
 };
-
 // SOFT DELETE EMPLOYEE
 const deleteEmployee = async (req, res) => {
   try {

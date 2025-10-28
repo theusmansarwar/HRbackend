@@ -1,27 +1,58 @@
 import Role from "../Models/Roles.js";
 
 // -------------------- CREATE ROLE --------------------
-const createRole = async (req, res) => {
+export const createRole = async (req, res) => {
   try {
     const { name, modules, description, status } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ message: "Role name is required" });
+    const missingFields = [];
+    if (!name)
+      missingFields.push({ name: "name", message: "Role name is required" });
+    if (!description)
+      missingFields.push({
+        name: "description",
+        message: "Description is required",
+      });
+    if (!modules || modules.length === 0)
+      missingFields.push({
+        name: "modules",
+        message: "Select at least one module",
+      });
+    if (!status)
+      missingFields.push({ name: "status", message: "Status is required" });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
     }
 
     const existingRole = await Role.findOne({ name });
-    if (existingRole) return res.status(400).json({ message: "Role already exists" });
+    if (existingRole) {
+      return res.status(400).json({
+        status: 400,
+        message: "Role already exists",
+      });
+    }
 
     const newRole = new Role({ name, modules, description, status });
     await newRole.save();
 
-    res.status(201).json({ message: "Role created successfully", role: newRole });
-  } catch (err) {
-    console.error("Error creating role:", err); 
-    res.status(500).json({ message: "Server error while creating role" });
+    return res.status(201).json({
+      status: 201,
+      message: "Role created successfully",
+      role: newRole,
+    });
+  } catch (error) {
+    console.error("Error creating role:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while creating role",
+    });
   }
 };
-
 
 // -------------------- GET ALL ROLES --------------------
 // const getAllRoles = async (req, res) => {
@@ -91,23 +122,61 @@ const getRoleById = async (req, res) => {
 };
 
 // -------------------- UPDATE ROLE --------------------
-const updateRole = async (req, res) => {
+export const updateRole = async (req, res) => {
   try {
+    const { id } = req.params;
     const { name, modules, description, status } = req.body;
 
-    const role = await Role.findById(req.params.id);
-    if (!role) return res.status(404).json({ message: "Role not found" });
+    const missingFields = [];
+    if (!name)
+      missingFields.push({ name: "name", message: "Role name is required" });
+    if (!description)
+      missingFields.push({
+        name: "description",
+        message: "Description is required",
+      });
+    if (!modules || modules.length === 0)
+      missingFields.push({
+        name: "modules",
+        message: "Select at least one module",
+      });
+    if (!status)
+      missingFields.push({ name: "status", message: "Status is required" });
 
-    role.name = name || role.name;
-    role.modules = modules || role.modules;
-    role.description = description || role.description;
-    role.status = status || role.status;
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
+    }
 
-    await role.save();
-    res.json({ message: "Role updated successfully", role });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error while updating role" });
+    const role = await Role.findById(id);
+    if (!role) {
+      return res.status(404).json({
+        status: 404,
+        message: "Role not found",
+      });
+    }
+
+    role.name = name;
+    role.modules = modules;
+    role.description = description;
+    role.status = status;
+
+    const updatedRole = await role.save();
+
+    return res.status(200).json({
+      status: 200,
+      message: "Role updated successfully",
+      role: updatedRole,
+    });
+  } catch (error) {
+    console.error("Error updating role:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while updating role",
+    });
   }
 };
 
@@ -135,10 +204,8 @@ const getRoleByName = async (req, res) => {
 };
 
 export {
-  createRole,
   getAllRoles,
   getRoleById,
-  updateRole,
   deleteRole,
   getRoleByName,
 };

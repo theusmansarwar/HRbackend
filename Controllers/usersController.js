@@ -1,11 +1,19 @@
 import User from "../Models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import Role from "../Models/Roles.js";  
-// LOGIN
+import Role from "../Models/Roles.js";
+
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const missingFields = [];
+    if (!email) missingFields.push("email");
+    if (!password) missingFields.push("password");
+    if (missingFields.length > 0)
+      return res.status(400).json({
+        message: `Missing required fields: ${missingFields.join(", ")}`,
+        missingFields,
+      });
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid Credentials" });
@@ -16,7 +24,7 @@ const loginUser = async (req, res) => {
     if (!validPass)
       return res.status(400).json({ message: "Invalid Credentials" });
 
-    const roleData = await Role.findOne({ name: user.role }); // <-- role model se modules lao
+    const roleData = await Role.findOne({ name: user.role });
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -24,15 +32,14 @@ const loginUser = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    //  Send response including modules
     res.json({
-        status: 200,
+      status: 200,
       message: "Login successful",
       user: {
         name: user.name,
         email: user.email,
         role: user.role,
-        modules: roleData ? roleData.modules : [], // yahan modules array bhejna zaruri hai
+        modules: roleData ? roleData.modules : [],
       },
       token,
     });
@@ -42,59 +49,102 @@ const loginUser = async (req, res) => {
   }
 };
 
-
-// SIGNUP
-const signupUser = async (req, res) => {
+export const signupUser = async (req, res) => {
   try {
     const { name, email, password, role, status = "active" } = req.body;
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: "User already exists" });
 
+    // Collect missing fields
+    const missingFields = [];
+    if (!name) missingFields.push({ name: "name", message: "Name is required" });
+    if (!email) missingFields.push({ name: "email", message: "Email is required" });
+    if (!password) missingFields.push({ name: "password", message: "Password is required" });
+    if (!role) missingFields.push({ name: "role", message: "Role is required" });
+
+    // Return consistent missing fields response
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        status: 400,
+        message: "User already exists",
+      });
+    }
+
+    // Generate new userId
+    const lastUser = await User.findOne().sort({ createdAt: -1 });
+    let newIdNumber = 1;
+    if (lastUser?.userId) {
+      const lastNumber = parseInt(lastUser.userId.split("-")[1]);
+      if (!isNaN(lastNumber)) newIdNumber = lastNumber + 1;
+    }
+
+    const userId = `USER-${newIdNumber.toString().padStart(4, "0")}`;
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword, role, status });
+
+    // Create and save new user
+    const newUser = new User({
+      userId,
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      status,
+    });
     await newUser.save();
 
-    res.json({ message: "Signup successful", user: { name, email, role, status } });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    // Success response
+    return res.status(201).json({
+      status: 201,
+      message: "User created successfully",
+      data: {
+        userId,
+        name,
+        email,
+        role,
+        status,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while creating user",
+    });
   }
 };
 
-// GET ALL USERS
+
 const getAllUsers = async (req, res) => {
   try {
-    // 🧭 Pagination & search query
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const search = req.query.search?.trim() || "";
 
-    // 🔍 Base filter for users
-    const baseFilter = {}; // e.g., { status: "active" } if needed
+    const baseFilter = {};
 
-    // 🔹 Search filter: match by name, email, or role
     if (search) {
       const regex = new RegExp(search, "i");
-      baseFilter.$or = [
-        { name: regex },
-        { email: regex },
-        { role: regex },
-      ];
+      baseFilter.$or = [{ name: regex }, { email: regex }, { role: regex }];
     }
 
-    // 🔹 Fetch users (exclude password)
     const users = await User.find(baseFilter)
       .select("-password")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // 🔹 Total count for pagination
     const total = await User.countDocuments(baseFilter);
 
-    // ✅ Send structured response
     return res.status(200).json({
-      message: "Users fetched successfully ✅",
+      message: "Users fetched successfully",
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
@@ -107,8 +157,6 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-
-// GET PROFILE
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -119,27 +167,80 @@ const getProfile = async (req, res) => {
   }
 };
 
-// UPDATE USER
-const updateUser = async (req, res) => {
+export const updateUser = async (req, res) => {
   try {
+    const { id } = req.params;
     const { name, email, role, status } = req.body;
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.name = name || user.name;
-    user.email = email || user.email;
-    user.role = role || user.role;
-    user.status = status || user.status;
+    // Collect missing fields
+    const missingFields = [];
+    if (!name) missingFields.push({ name: "name", message: "Name is required" });
+    if (!email) missingFields.push({ name: "email", message: "Email is required" });
+    if (!role) missingFields.push({ name: "role", message: "Role is required" });
+    if (!status) missingFields.push({ name: "status", message: "Status is required" });
 
-    await user.save();
-    res.json({ message: "User updated successfully", user });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error updating user" });
+    // Return consistent response if missing
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required fields",
+        missingFields,
+      });
+    }
+
+    // Find existing user
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        message: "User not found",
+      });
+    }
+
+    // Update user fields
+    user.name = name;
+    user.email = email;
+    user.role = role;
+    user.status = status;
+
+    const updatedUser = await user.save();
+
+    // Success response
+    return res.status(200).json({
+      status: 200,
+      message: "User updated successfully",
+      data: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        status: updatedUser.status,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+
+    // Handle mongoose validation error in same format
+    if (error.name === "ValidationError") {
+      const missingFields = Object.keys(error.errors).map((key) => ({
+        name: key,
+        message: `${key.charAt(0).toUpperCase() + key.slice(1)} is required`,
+      }));
+      return res.status(400).json({
+        status: 400,
+        message: "Validation failed",
+        missingFields,
+      });
+    }
+
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while updating user",
+    });
   }
 };
 
-// DELETE USER
+
 const deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -153,9 +254,7 @@ const deleteUser = async (req, res) => {
 
 export {
   loginUser,
-  signupUser,
   getAllUsers,
   getProfile,
-  updateUser,
   deleteUser,
-};  
+};
