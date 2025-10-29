@@ -51,14 +51,14 @@ const loginUser = async (req, res) => {
 
 export const signupUser = async (req, res) => {
   try {
-    const { name, email, password, role, status = "active" } = req.body;
+    const { name, email, password, role, status = "Active" } = req.body;
 
     // Collect missing fields
     const missingFields = [];
-    if (!name) missingFields.push({ name: "name", message: "Name is required" });
-    if (!email) missingFields.push({ name: "email", message: "Email is required" });
-    if (!password) missingFields.push({ name: "password", message: "Password is required" });
-    if (!role) missingFields.push({ name: "role", message: "Role is required" });
+    if (!name?.trim()) missingFields.push({ name: "name", message: "Name is required" });
+    if (!email?.trim()) missingFields.push({ name: "email", message: "Email is required" });
+    if (!password?.trim()) missingFields.push({ name: "password", message: "Password is required" });
+    if (!role?.trim()) missingFields.push({ name: "role", message: "Role is required" });
 
     // Return consistent missing fields response
     if (missingFields.length > 0) {
@@ -70,34 +70,41 @@ export const signupUser = async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.trim() });
     if (existingUser) {
       return res.status(400).json({
         status: 400,
-        message: "User already exists",
+        message: "Email already exists",
+        missingFields: [{ name: "email", message: "Email already exists" }],
       });
     }
 
-    // Generate new userId
+    // Generate new userId (auto-increment)
     const lastUser = await User.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
+    
     if (lastUser?.userId) {
       const lastNumber = parseInt(lastUser.userId.split("-")[1]);
-      if (!isNaN(lastNumber)) newIdNumber = lastNumber + 1;
+      if (!isNaN(lastNumber)) {
+        newIdNumber = lastNumber + 1;
+      }
     }
 
-    const userId = `USER-${newIdNumber.toString().padStart(4, "0")}`;
+    const userId = `USR-${newIdNumber.toString().padStart(3, "0")}`;
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create and save new user
     const newUser = new User({
       userId,
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim(),
       password: hashedPassword,
-      role,
-      status,
+      role: role.trim(),
+      status: status.trim(),
     });
+    
     await newUser.save();
 
     // Success response
@@ -105,15 +112,40 @@ export const signupUser = async (req, res) => {
       status: 201,
       message: "User created successfully",
       data: {
-        userId,
-        name,
-        email,
-        role,
-        status,
+        _id: newUser._id,
+        userId: newUser.userId,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        status: newUser.status,
       },
     });
   } catch (error) {
     console.error("Error creating user:", error);
+
+    // Handle mongoose validation error
+    if (error.name === "ValidationError") {
+      const missingFields = Object.keys(error.errors).map((key) => ({
+        name: key,
+        message: error.errors[key].message || `${key.charAt(0).toUpperCase() + key.slice(1)} is required`,
+      }));
+      return res.status(400).json({
+        status: 400,
+        message: "Validation failed",
+        missingFields,
+      });
+    }
+
+    // Handle duplicate key error (email uniqueness)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        status: 400,
+        message: "Duplicate field value",
+        missingFields: [{ name: field, message: `${field.charAt(0).toUpperCase() + field.slice(1)} already exists` }],
+      });
+    }
+
     return res.status(500).json({
       status: 500,
       message: "Server error while creating user",
@@ -121,25 +153,40 @@ export const signupUser = async (req, res) => {
   }
 };
 
-
 const getAllUsers = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const search = req.query.search?.trim() || "";
+    const skip = (page - 1) * limit;
 
     const baseFilter = {};
 
+    // 🔍 TESTING - Pehle saare users dekho
+    const allUsers = await User.find({}).select("name email status role");
+    console.log("=== ALL USERS IN DATABASE ===");
+    console.log(JSON.stringify(allUsers, null, 2));
+
     if (search) {
       const regex = new RegExp(search, "i");
-      baseFilter.$or = [{ name: regex }, { email: regex }, { role: regex }];
+      baseFilter.$or = [
+        { userId: regex },
+        { name: regex },
+        { email: regex },
+        { role: regex },
+        { status: regex },
+      ];
+      
+      console.log("Search query:", search);
     }
 
     const users = await User.find(baseFilter)
       .select("-password")
       .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
+      .skip(skip)
       .limit(limit);
+
+    console.log("Found users:", users.length);
 
     const total = await User.countDocuments(baseFilter);
 
@@ -153,7 +200,10 @@ const getAllUsers = async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching users:", err);
-    return res.status(500).json({ message: "Error fetching users" });
+    return res.status(500).json({ 
+      message: "Error fetching users",
+      error: err.message 
+    });
   }
 };
 
@@ -174,10 +224,10 @@ export const updateUser = async (req, res) => {
 
     // Collect missing fields
     const missingFields = [];
-    if (!name) missingFields.push({ name: "name", message: "Name is required" });
-    if (!email) missingFields.push({ name: "email", message: "Email is required" });
-    if (!role) missingFields.push({ name: "role", message: "Role is required" });
-    if (!status) missingFields.push({ name: "status", message: "Status is required" });
+    if (!name?.trim()) missingFields.push({ name: "name", message: "Name is required" });
+    if (!email?.trim()) missingFields.push({ name: "email", message: "Email is required" });
+    if (!role?.trim()) missingFields.push({ name: "role", message: "Role is required" });
+    if (!status?.trim()) missingFields.push({ name: "status", message: "Status is required" });
 
     // Return consistent response if missing
     if (missingFields.length > 0) {
@@ -197,11 +247,23 @@ export const updateUser = async (req, res) => {
       });
     }
 
+    // Check if email is being changed and if it already exists
+    if (email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({
+          status: 400,
+          message: "Email already exists",
+          missingFields: [{ name: "email", message: "Email already exists" }],
+        });
+      }
+    }
+
     // Update user fields
-    user.name = name;
-    user.email = email;
-    user.role = role;
-    user.status = status;
+    user.name = name.trim();
+    user.email = email.trim();
+    user.role = role.trim();
+    user.status = status.trim();
 
     const updatedUser = await user.save();
 
@@ -210,7 +272,7 @@ export const updateUser = async (req, res) => {
       status: 200,
       message: "User updated successfully",
       data: {
-        id: updatedUser._id,
+        _id: updatedUser._id, // Changed from 'id' to '_id' for consistency
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
@@ -224,12 +286,22 @@ export const updateUser = async (req, res) => {
     if (error.name === "ValidationError") {
       const missingFields = Object.keys(error.errors).map((key) => ({
         name: key,
-        message: `${key.charAt(0).toUpperCase() + key.slice(1)} is required`,
+        message: error.errors[key].message || `${key.charAt(0).toUpperCase() + key.slice(1)} is required`,
       }));
       return res.status(400).json({
         status: 400,
         message: "Validation failed",
         missingFields,
+      });
+    }
+
+    // Handle duplicate key error (email uniqueness)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        status: 400,
+        message: "Duplicate field value",
+        missingFields: [{ name: field, message: `${field.charAt(0).toUpperCase() + field.slice(1)} already exists` }],
       });
     }
 
@@ -239,7 +311,6 @@ export const updateUser = async (req, res) => {
     });
   }
 };
-
 
 const deleteUser = async (req, res) => {
   try {

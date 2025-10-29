@@ -22,7 +22,6 @@ export const createPayroll = async (req, res) => {
       status,
     } = req.body;
 
-    // 1️⃣ Manual Validation
     const missingFields = [];
 
     if (!employeeId)
@@ -54,7 +53,6 @@ export const createPayroll = async (req, res) => {
       });
     }
 
-    // 2️⃣ Prevent duplicate payroll
     const exists = await Payroll.findOne({ employeeId, month, year, isArchived: false });
     if (exists) {
       return res.status(400).json({
@@ -68,8 +66,6 @@ export const createPayroll = async (req, res) => {
         ],
       });
     }
-
-    // 3️⃣ Auto-generate payrollId
     const lastPayroll = await Payroll.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     if (lastPayroll?.payrollId) {
@@ -78,7 +74,6 @@ export const createPayroll = async (req, res) => {
     }
     const payrollId = `PAYROLL-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // 4️⃣ Create Payroll
     const payroll = new Payroll({
       payrollId,
       employeeId,
@@ -99,7 +94,7 @@ export const createPayroll = async (req, res) => {
 
     return res.status(201).json({
       status: 201,
-      message: "Payroll created successfully ✅",
+      message: "Payroll created successfully",
       data: payroll,
     });
   } catch (error) {
@@ -132,7 +127,6 @@ export const updatePayroll = async (req, res) => {
       status,
     } = req.body;
 
-    // 1️⃣ Manual Validation
     const missingFields = [];
 
     if (!employeeId)
@@ -164,7 +158,6 @@ export const updatePayroll = async (req, res) => {
       });
     }
 
-    // 2️⃣ Find payroll
     const payroll = await Payroll.findById(id);
     if (!payroll) {
       return res.status(404).json({
@@ -173,7 +166,6 @@ export const updatePayroll = async (req, res) => {
       });
     }
 
-    // 3️⃣ Update fields
     Object.assign(payroll, {
       employeeId,
       basicSalary,
@@ -188,13 +180,11 @@ export const updatePayroll = async (req, res) => {
       year,
       status: status || "Pending",
     });
-
-    // 4️⃣ Save
     const updatedPayroll = await payroll.save();
 
     return res.status(200).json({
       status: 200,
-      message: "Payroll updated successfully ✅",
+      message: "Payroll updated successfully ",
       data: updatedPayroll,
     });
   } catch (error) {
@@ -206,9 +196,6 @@ export const updatePayroll = async (req, res) => {
   }
 };
 
-
-
-// READ ACTIVE PAYROLLS (with pagination)
 export const getPayrollList = async (req, res) => {
   try {
     // Extract query parameters safely
@@ -244,7 +231,7 @@ export const getPayrollList = async (req, res) => {
 
     // Send response
     return res.status(200).json({
-      message: "Active payrolls fetched successfully ✅",
+      message: "Active payrolls fetched successfully",
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,

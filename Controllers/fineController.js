@@ -52,7 +52,7 @@ export const createFine = async (req, res) => {
 
     return res.status(201).json({
       status: 201,
-      message: "Fine created successfully ✅",
+      message: "Fine created successfully",
       data: fine,
     });
   } catch (error) {
@@ -64,9 +64,6 @@ export const createFine = async (req, res) => {
   }
 };
  
-
-
-
 export const updateFine = async (req, res) => {
   try {
     const { id } = req.params;
@@ -133,7 +130,7 @@ export const updateFine = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
-      message: "Fine updated successfully ✅",
+      message: "Fine updated successfully",
       data: updatedFine,
     });
   } catch (error) {
@@ -165,35 +162,82 @@ export const getFineList = async (req, res) => {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const search = req.query.search?.trim() || "";
+    const skip = (page - 1) * limit;
 
-    const filter = { archiveFine: false };
+    const baseFilter = { archiveFine: false };
 
-    let fines = await Fine.find(filter)
-      .populate("employeeId", "firstName lastName email")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    let pipeline = [
+      { $match: baseFilter },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "employeeId",
+          foreignField: "_id",
+          as: "employeeInfo",
+        },
+      },
+      { $unwind: { path: "$employeeInfo", preserveNullAndEmptyArrays: true } },
+    ];
 
     if (search) {
       const regex = new RegExp(search, "i");
-      fines = fines.filter(
-        (fine) =>
-          regex.test(fine.fineType) ||
-          regex.test(String(fine.fineAmount)) ||
-          regex.test(fine.employeeId?.firstName || "") ||
-          regex.test(fine.employeeId?.lastName || "") ||
-          regex.test(fine.employeeId?.email || "")
-      );
+      pipeline.push({
+        $match: {
+          $or: [
+            { fineId: regex },                        
+            { fineType: regex },                       
+            { description: regex },                   
+            { status: regex },                        
+            { "employeeInfo.firstName": regex },      
+            { "employeeInfo.lastName": regex },       
+            { "employeeInfo.email": regex },         
+            
+            { $expr: { $regexMatch: { input: { $toString: "$fineAmount" }, regex: search, options: "i" } } }, // Fine amount as string
+          ],
+        },
+      });
     }
 
-    const total = await Fine.countDocuments(filter);
+    const countPipeline = [...pipeline, { $count: "total" }];
+    const countResult = await Fine.aggregate(countPipeline);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+
+    pipeline.push(
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit }
+    );
+
+    pipeline.push({
+      $project: {
+        _id: 1,
+        fineId: 1,
+        fineType: 1,
+        fineAmount: 1,
+        fineDate: 1,
+        description: 1,
+        status: 1,
+        archiveFine: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        employeeId: {
+          _id: "$employeeInfo._id",
+          firstName: "$employeeInfo.firstName",
+          lastName: "$employeeInfo.lastName",
+          email: "$employeeInfo.email",
+        },
+      },
+    });
+
+    const fines = await Fine.aggregate(pipeline);
 
     return res.status(200).json({
       status: "success",
-      message: "Active fines fetched successfully ✅",
+      message: "Active fines fetched successfully",
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
+      limit,
       data: fines,
     });
   } catch (error) {
@@ -201,6 +245,7 @@ export const getFineList = async (req, res) => {
     return res.status(500).json({
       status: "error",
       message: "Server error while fetching fines",
+      error: error.message,
     });
   }
 };

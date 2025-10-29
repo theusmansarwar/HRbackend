@@ -67,7 +67,7 @@ export const createTraining = async (req, res) => {
 
     return res.status(201).json({
       status: 201,
-      message: "Training created successfully ✅",
+      message: "Training created successfully ",
       data: newTraining,
     });
   } catch (error) {
@@ -77,9 +77,8 @@ export const createTraining = async (req, res) => {
       details: error.message,
     });
   }
-};
+}
 
-// UPDATE TRAINING
 export const updateTraining = async (req, res) => {
   try {
     const { id } = req.params;
@@ -152,7 +151,7 @@ export const updateTraining = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
-      message: "Training updated successfully ✅",
+      message: "Training updated successfully",
       data: updatedTraining,
     });
   } catch (error) {
@@ -165,46 +164,83 @@ export const updateTraining = async (req, res) => {
   }
 };
 
-
-
- export const getTrainingList = async (req, res) => {
+export const getTrainingList = async (req, res) => {
   try {
-    // Extract query parameters safely
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const search = req.query.search?.trim() || "";
+    const skip = (page - 1) * limit;
 
-    // Base filter for active trainings
     const baseFilter = { isArchived: false };
 
-    // Fetch trainings with populated employee info
-    let trainings = await Training.find(baseFilter)
-      .populate("employeeId", "firstName lastName email employeeId")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    let pipeline = [
+      { $match: baseFilter },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "employeeId",
+          foreignField: "_id",
+          as: "employeeInfo",
+        },
+      },
+      { $unwind: { path: "$employeeInfo", preserveNullAndEmptyArrays: true } },
+    ];
 
-    // Apply manual search after populate (same style as payroll)
+    // Add search filter if search query exists
     if (search) {
       const regex = new RegExp(search, "i");
-      trainings = trainings.filter(
-        (training) =>
-          regex.test(training.trainingTitle || "") ||
-          regex.test(training.trainingType || "") ||
-          regex.test(training.trainingStatus || "") ||
-          regex.test(training.employeeId?.firstName || "") ||
-          regex.test(training.employeeId?.lastName || "") ||
-          regex.test(training.employeeId?.email || "") ||
-          regex.test(String(training.employeeId?.employeeId || ""))
-      );
+      pipeline.push({
+        $match: {
+          $or: [
+            { trainingId: regex },                     // Training ID
+            { trainingName: regex },                   // Training Name
+            { certificate: regex },                    // Certificate
+            { status: regex },                         // Status (Completed, In Progress, Pending)
+            { "employeeInfo.firstName": regex },       // Employee first name
+            { "employeeInfo.lastName": regex },        // Employee last name
+            { "employeeInfo.email": regex },           // Employee email
+            { "employeeInfo.employeeId": regex },      // Employee ID
+          ],
+        },
+      });
     }
 
-    // Get total count for pagination
-    const total = await Training.countDocuments(baseFilter);
+    const countPipeline = [...pipeline, { $count: "total" }];
+    const countResult = await Training.aggregate(countPipeline);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+    
+    pipeline.push(
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit }
+    );
 
-    // Send clean response
+    pipeline.push({
+      $project: {
+        _id: 1,
+        trainingId: 1,
+        trainingName: 1,
+        startDate: 1,
+        endDate: 1,
+        certificate: 1,
+        status: 1,
+        isArchived: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        employeeId: {
+          _id: "$employeeInfo._id",
+          firstName: "$employeeInfo.firstName",
+          lastName: "$employeeInfo.lastName",
+          email: "$employeeInfo.email",
+          employeeId: "$employeeInfo.employeeId",
+        },
+      },
+    });
+
+    const trainings = await Training.aggregate(pipeline);
+
     return res.status(200).json({
-      message: "Active trainings fetched successfully ✅",
+      message: "Active trainings fetched successfully",
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
@@ -213,7 +249,10 @@ export const updateTraining = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching trainings:", error);
-    return res.status(500).json({ error: "Server Error" });
+    return res.status(500).json({ 
+      message: "Error fetching trainings",
+      error: error.message 
+    });
   }
 };
 

@@ -188,39 +188,112 @@ if (!expiryDate?.trim())
     });
   }
 };
+
 export const getJobList = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
     const skip = (page - 1) * limit;
 
-    const jobs = await Job.find({ isArchived: false })
-      .populate({
-        path: "departmentId",
-        model: "Department",
-        select: "departmentName departmentCode",
-      })
-      .populate({
-        path: "designationId",
-        model: "Designation",
-        select: "designationName",
-      })
-      .sort({ createdAt: -1 });
+    const baseFilter = { isArchived: false };
 
-    const total = await Job.countDocuments({ isArchived: false });
+    let pipeline = [
+      { $match: baseFilter },
+      {
+        $lookup: {
+          from: "departments",
+          localField: "departmentId",
+          foreignField: "_id",
+          as: "departmentInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "designations",
+          localField: "designationId",
+          foreignField: "_id",
+          as: "designationInfo",
+        },
+      },
+      { $unwind: { path: "$departmentInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$designationInfo", preserveNullAndEmptyArrays: true } },
+    ];
+
+    // Add search filter if search query exists
+    if (search) {
+      const regex = new RegExp(search, "i");
+      pipeline.push({
+        $match: {
+          $or: [
+            { jobTitle: regex },
+            { jobDescription: regex },
+            { status: regex },
+            { jobId: regex },
+            { "departmentInfo.departmentName": regex },
+            { "departmentInfo.departmentCode": regex },
+            { "designationInfo.designationName": regex },
+          ],
+        },
+      });
+    }
+
+    // Get total count
+    const countPipeline = [...pipeline, { $count: "total" }];
+    const countResult = await Job.aggregate(countPipeline);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+
+    // Add sorting, skip, and limit
+    pipeline.push(
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit }
+    );
+
+    // Project to reshape the output
+    pipeline.push({
+      $project: {
+        _id: 1,
+        jobId: 1,
+        jobTitle: 1,
+        jobDescription: 1,
+        status: 1,
+        postingDate: 1,
+        expiryDate: 1,
+        isArchived: 1,
+        applicationsCount: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        departmentId: {
+          _id: "$departmentInfo._id",
+          departmentName: "$departmentInfo.departmentName",
+          departmentCode: "$departmentInfo.departmentCode",
+        },
+        designationId: {
+          _id: "$designationInfo._id",
+          designationName: "$designationInfo.designationName",
+        },
+      },
+    });
+
+    const jobs = await Job.aggregate(pipeline);
 
     return res.status(200).json({
-      message: "Active job list fetched",
+      message: "Active job list fetched successfully",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: jobs,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error fetching jobs:", error);
+    return res.status(500).json({
+      message: "Something went wrong while fetching jobs",
+      error: error.message,
+    });
   }
 };
-
- 
 export const getArchivedJobs = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;

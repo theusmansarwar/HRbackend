@@ -56,28 +56,45 @@ export const createDepartment = async (req, res) => {
   }
 };
 
-// GET ACTIVE DEPARTMENTS
 export const getDepartmentList = async (req, res) => {
   try {
-    const pageNum = parseInt(req.query.page) || 1;
-    const limitNum = parseInt(req.query.limit) || 10;
-    const skip = (pageNum - 1) * limitNum;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search = req.query.search?.trim() || "";
+    const skip = (page - 1) * limit;
 
-    const departments = await Department.find({ isArchived: false })
+    const baseFilter = { isArchived: false };
+
+    let searchFilter = {};
+    if (search) {
+      const regex = new RegExp(search, "i");
+      searchFilter = {
+        $or: [
+          { name: regex },                    
+          { headOfDepartment: regex },        
+          { departmentName: regex },         
+        ],
+      };
+    }
+
+    const finalFilter = { ...baseFilter, ...searchFilter };
+    const departments = await Department.find(finalFilter)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limitNum);
+      .limit(limit);
 
-    const total = await Department.countDocuments({ isArchived: false });
+    const total = await Department.countDocuments(finalFilter);
 
     return res.status(200).json({
-      message: "Active department list fetched",
+      message: "Department list fetched successfully",
       total,
-      page: pageNum,
-      limit: limitNum,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: departments,
     });
   } catch (error) {
+    console.error("Error fetching departments:", error);
     return res.status(500).json({
       message: "Something went wrong while fetching departments",
       error: error.message,
@@ -85,7 +102,6 @@ export const getDepartmentList = async (req, res) => {
   }
 };
 
-// GET ARCHIVED DEPARTMENTS
 export const getArchivedDepartments = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -110,7 +126,6 @@ export const getArchivedDepartments = async (req, res) => {
   }
 };
 
-// GET SINGLE DEPARTMENT BY ID
 export const getDepartmentById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -128,7 +143,6 @@ export const getDepartmentById = async (req, res) => {
   }
 };
 
-// UPDATE DEPARTMENT
 export const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -136,7 +150,6 @@ export const updateDepartment = async (req, res) => {
 
     const missingFields = [];
 
-    // ✅ VALIDATIONS
     if (!departmentName)
       missingFields.push({ name: "departmentName", message: "Department Name is required" });
 
@@ -151,7 +164,6 @@ export const updateDepartment = async (req, res) => {
       });
     }
 
-    // ✅ UPDATE DEPARTMENT
     const updated = await Department.findByIdAndUpdate(
       id,
       {
@@ -185,7 +197,6 @@ export const updateDepartment = async (req, res) => {
   }
 };
 
-// ARCHIVE (SOFT DELETE) DEPARTMENT
 export const deleteDepartment = async (req, res) => {
   try {
     const { id } = req.params;

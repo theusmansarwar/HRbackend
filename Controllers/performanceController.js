@@ -50,7 +50,6 @@ export const createPerformance = async (req, res) => {
     }
     const performanceId = `PERF-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // ✅ Create Performance Record
     const performance = await Performance.create({
       performanceId,
       employeeId,
@@ -64,7 +63,7 @@ export const createPerformance = async (req, res) => {
 
     return res.status(201).json({
       status: 201,
-      message: "Performance created successfully ✅",
+      message: "Performance created successfully",
       data: performance,
     });
   } catch (error) {
@@ -76,49 +75,99 @@ export const createPerformance = async (req, res) => {
   }
 };
 
-
-// GET PERFORMANCE LIST (with pagination)
 export const getPerformanceList = async (req, res) => {
   try {
-    // Safe query parameter handling
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const search = req.query.search?.trim() || "";
+    const skip = (page - 1) * limit;
 
-    // Base filter (excluding archived)
     const baseFilter = { status: { $ne: "Archived" } };
 
-    // Fetch performance records with employee & reviewer info
-    let performanceList = await Performance.find(baseFilter)
-      .populate("employeeId", "firstName lastName email employeeId")
-      .populate("reviewerId", "firstName lastName email")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    let pipeline = [
+      { $match: baseFilter },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "employeeId",
+          foreignField: "_id",
+          as: "employeeInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "reviewerId",
+          foreignField: "_id",
+          as: "reviewerInfo",
+        },
+      },
+      { $unwind: { path: "$employeeInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$reviewerInfo", preserveNullAndEmptyArrays: true } },
+    ];
 
-    // Apply manual search after populate (for related fields)
     if (search) {
       const regex = new RegExp(search, "i");
-      performanceList = performanceList.filter(
-        (item) =>
-          regex.test(item.reviewPeriod || "") ||
-          regex.test(item.performanceRating || "") ||
-          regex.test(item.comments || "") ||
-          regex.test(item.employeeId?.firstName || "") ||
-          regex.test(item.employeeId?.lastName || "") ||
-          regex.test(item.employeeId?.email || "") ||
-          regex.test(item.reviewerId?.firstName || "") ||
-          regex.test(item.reviewerId?.lastName || "") ||
-          regex.test(item.reviewerId?.email || "")
-      );
+      pipeline.push({
+        $match: {
+          $or: [
+            { performanceId: regex },                 
+            { remarks: regex },                      
+            { status: regex },
+            { KPIs: regex },                          
+            { "employeeInfo.firstName": regex },      
+            { "employeeInfo.lastName": regex },        
+            { "employeeInfo.email": regex },           
+            { "employeeInfo.employeeId": regex },     
+            { "reviewerInfo.firstName": regex },      
+            { "reviewerInfo.lastName": regex },        
+            { "reviewerInfo.email": regex },           
+            { $expr: { $regexMatch: { input: { $toString: "$score" }, regex: search, options: "i" } } }, // Score as string
+          ],
+        },
+      });
     }
+    const countPipeline = [...pipeline, { $count: "total" }];
+    const countResult = await Performance.aggregate(countPipeline);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
 
-    // Get total count for pagination
-    const total = await Performance.countDocuments(baseFilter);
+    pipeline.push(
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit }
+    );
 
-    // Send clean response
+    pipeline.push({
+      $project: {
+        _id: 1,
+        performanceId: 1,
+        KPIs: 1,
+        appraisalDate: 1,
+        score: 1,
+        remarks: 1,
+        status: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        employeeId: {
+          _id: "$employeeInfo._id",
+          firstName: "$employeeInfo.firstName",
+          lastName: "$employeeInfo.lastName",
+          email: "$employeeInfo.email",
+          employeeId: "$employeeInfo.employeeId",
+        },
+        reviewerId: {
+          _id: "$reviewerInfo._id",
+          firstName: "$reviewerInfo.firstName",
+          lastName: "$reviewerInfo.lastName",
+          email: "$reviewerInfo.email",
+        },
+      },
+    });
+
+    const performanceList = await Performance.aggregate(pipeline);
+
     return res.status(200).json({
-      message: "Active performance records fetched successfully ✅",
+      message: "Active performance records fetched successfully",
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
@@ -127,10 +176,12 @@ export const getPerformanceList = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching performance list:", error);
-    return res.status(500).json({ error: "Server Error" });
+    return res.status(500).json({ 
+      message: "Error fetching performance records",
+      error: error.message 
+    });
   }
 };
-
 
 // GET SINGLE PERFORMANCE BY ID
 export const getPerformanceById = async (req, res) => {

@@ -86,7 +86,7 @@ const getAllRoles = async (req, res) => {
       const regex = new RegExp(search, "i");
       roles = roles.filter(
         (role) =>
-          regex.test(role.roleName || "") || // assuming role has a name field
+          regex.test(role.name || "") || // assuming role has a name field
           regex.test(role.description || "")  // optional field
       );
     }
