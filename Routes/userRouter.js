@@ -1,7 +1,7 @@
 import express from "express";
 import { protect } from "../Middlewares/authMiddleware.js";
 import { verifyRole } from "../Middlewares/verifyRole.js";
-import * as usersController from "../Controllers/usersController.js";
+import * as usersController from "../Controllers/userController.js";
 const router = express.Router();
 
 router.post("/login", usersController.loginUser);
