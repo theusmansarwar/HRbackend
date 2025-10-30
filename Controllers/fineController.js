@@ -1,6 +1,7 @@
 // Controllers/fineController.js
 import Fine from "../Models/fineModel.js";
 import Employee from "../Models/employeeModel.js";
+import { logActivity } from "../utils/activityLogger.js";
 
 
 export const createFine = async (req, res) => {
@@ -49,6 +50,8 @@ export const createFine = async (req, res) => {
     });
 
     await fine.save();
+    console.log("User info:", req.user);
+    await logActivity(req.user._id, "Fine", "Created", null, fine);
 
     return res.status(201).json({
       status: 201,
@@ -129,6 +132,11 @@ export const updateFine = async (req, res) => {
     fine.status = status || "Unpaid";
 
     const updatedFine = await fine.save();
+
+    console.log("User info:", req.user);
+
+
+    await logActivity(req.user._id, "Fine", "Updated", req.oldData, updatedFine);
 
     return res.status(200).json({
       status: 200,
@@ -299,6 +307,8 @@ export const deleteFine = async (req, res) => {
 
     fine.archiveFine = true;
     await fine.save();
+
+    await logActivity(req.user._id, "Fine", "Archived", req.oldData, null);
 
     return res.status(200).json({
       status: "success",

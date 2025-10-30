@@ -4,17 +4,20 @@ import {
   getFineList,
   updateFine,
   deleteFine,
-  getArchivedFines
+  getArchivedFines,
 } from "../Controllers/fineController.js";
-import { logActivity } from "../Middlewares/activtyLogger.js";
+import { protect } from "../Middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// Routes
-router.post("/createFine", logActivity("Fine"),createFine);
-router.get("/getFines" ,getFineList);
-router.put("/updateFine/:id", logActivity("Fine"),updateFine);
-router.delete("/deleteFine/:id", logActivity("Fine"),deleteFine);
-router.get("/getArchivedFines", getArchivedFines);
+// ❌ Remove the wrong import and middleware usage
+// import { logActivity } from "../Middlewares/activtyLogger.js";
+
+// ✅ Use only protect middleware
+router.post("/createFine", protect, createFine);
+router.put("/updateFine/:id", protect, updateFine);
+router.delete("/deleteFine/:id", protect, deleteFine);
+router.get("/getFines", protect, getFineList);
+router.get("/getArchivedFines", protect, getArchivedFines);
 
 export default router;
