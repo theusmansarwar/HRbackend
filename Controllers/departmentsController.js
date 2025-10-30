@@ -1,14 +1,12 @@
 // controllers/departmentController.js
 import Department from "../Models/departmentModel.js";
 
-// CREATE DEPARTMENT
 export const createDepartment = async (req, res) => {
   try {
-    const { departmentName, headOfDepartment, status, archiveDepartment } = req.body;
+    const { departmentName, headOfDepartment, status } = req.body;
 
     const missingFields = [];
 
-    // ✅ VALIDATIONS
     if (!departmentName)
       missingFields.push({ name: "departmentName", message: "Department Name is required" });
 
@@ -23,7 +21,6 @@ export const createDepartment = async (req, res) => {
       });
     }
 
-    // ✅ AUTO-ID GENERATION
     const lastDept = await Department.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     if (lastDept && lastDept.departmentId) {
@@ -32,13 +29,12 @@ export const createDepartment = async (req, res) => {
     }
     const departmentId = `DEPT-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // ✅ CREATE NEW DEPARTMENT
     const department = await Department.create({
       departmentId,
       departmentName,
       headOfDepartment,
       status: status || "Active",
-      archiveDepartment: archiveDepartment || false,
+      isArchived: false,
     });
 
     return res.status(201).json({
@@ -70,9 +66,9 @@ export const getDepartmentList = async (req, res) => {
       const regex = new RegExp(search, "i");
       searchFilter = {
         $or: [
-          { name: regex },                    
-          { headOfDepartment: regex },        
-          { departmentName: regex },         
+          { departmentName: regex },
+          { headOfDepartment: regex },
+          { departmentId: regex },
         ],
       };
     }
@@ -107,12 +103,13 @@ export const getArchivedDepartments = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    const archived = await Department.find({ archiveDepartment: true })
+    // Fixed: using isArchived instead of archiveDepartment
+    const archived = await Department.find({ isArchived: true })
       .sort({ createdAt: -1 })
       .skip(parseInt(skip))
       .limit(parseInt(limit));
 
-    const total = await Department.countDocuments({ archiveDepartment: true });
+    const total = await Department.countDocuments({ isArchived: true });
 
     return res.status(200).json({
       message: "Archived departments fetched",
@@ -146,7 +143,7 @@ export const getDepartmentById = async (req, res) => {
 export const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { departmentName, headOfDepartment, status, archiveDepartment } = req.body;
+    const { departmentName, headOfDepartment, status } = req.body;
 
     const missingFields = [];
 
@@ -170,7 +167,6 @@ export const updateDepartment = async (req, res) => {
         departmentName,
         headOfDepartment,
         status,
-        archiveDepartment,
       },
       { new: true }
     );
@@ -205,11 +201,12 @@ export const deleteDepartment = async (req, res) => {
     if (!department)
       return res.status(404).json({ error: "Department not found" });
 
-    department.archiveDepartment = true;
+    department.isArchived = true;
     await department.save();
 
     return res.status(200).json({
       message: "Department archived successfully",
+      data: department,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
