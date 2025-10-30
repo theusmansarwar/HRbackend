@@ -53,14 +53,12 @@ export const signupUser = async (req, res) => {
   try {
     const { name, email, password, role, status = "Active" } = req.body;
 
-    // Collect missing fields
     const missingFields = [];
     if (!name?.trim()) missingFields.push({ name: "name", message: "Name is required" });
     if (!email?.trim()) missingFields.push({ name: "email", message: "Email is required" });
     if (!password?.trim()) missingFields.push({ name: "password", message: "Password is required" });
     if (!role?.trim()) missingFields.push({ name: "role", message: "Role is required" });
 
-    // Return consistent missing fields response
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
@@ -69,7 +67,6 @@ export const signupUser = async (req, res) => {
       });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email: email.trim() });
     if (existingUser) {
       return res.status(400).json({
@@ -79,7 +76,6 @@ export const signupUser = async (req, res) => {
       });
     }
 
-    // Generate new userId (auto-increment)
     const lastUser = await User.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     
@@ -91,11 +87,7 @@ export const signupUser = async (req, res) => {
     }
 
     const userId = `USR-${newIdNumber.toString().padStart(3, "0")}`;
-
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create and save new user
     const newUser = new User({
       userId,
       name: name.trim(),
@@ -106,8 +98,6 @@ export const signupUser = async (req, res) => {
     });
     
     await newUser.save();
-
-    // Success response
     return res.status(201).json({
       status: 201,
       message: "User created successfully",
@@ -123,7 +113,6 @@ export const signupUser = async (req, res) => {
   } catch (error) {
     console.error("Error creating user:", error);
 
-    // Handle mongoose validation error
     if (error.name === "ValidationError") {
       const missingFields = Object.keys(error.errors).map((key) => ({
         name: key,
@@ -136,7 +125,6 @@ export const signupUser = async (req, res) => {
       });
     }
 
-    // Handle duplicate key error (email uniqueness)
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({
@@ -162,7 +150,6 @@ const getAllUsers = async (req, res) => {
 
     const baseFilter = {};
 
-    // 🔍 TESTING - Pehle saare users dekho
     const allUsers = await User.find({}).select("name email status role");
     console.log("=== ALL USERS IN DATABASE ===");
     console.log(JSON.stringify(allUsers, null, 2));
@@ -222,14 +209,12 @@ export const updateUser = async (req, res) => {
     const { id } = req.params;
     const { name, email, role, status } = req.body;
 
-    // Collect missing fields
     const missingFields = [];
     if (!name?.trim()) missingFields.push({ name: "name", message: "Name is required" });
     if (!email?.trim()) missingFields.push({ name: "email", message: "Email is required" });
     if (!role?.trim()) missingFields.push({ name: "role", message: "Role is required" });
     if (!status?.trim()) missingFields.push({ name: "status", message: "Status is required" });
 
-    // Return consistent response if missing
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
@@ -238,7 +223,6 @@ export const updateUser = async (req, res) => {
       });
     }
 
-    // Find existing user
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({
@@ -247,7 +231,6 @@ export const updateUser = async (req, res) => {
       });
     }
 
-    // Check if email is being changed and if it already exists
     if (email !== user.email) {
       const existingUser = await User.findOne({ email });
       if (existingUser) {
@@ -259,20 +242,17 @@ export const updateUser = async (req, res) => {
       }
     }
 
-    // Update user fields
     user.name = name.trim();
     user.email = email.trim();
     user.role = role.trim();
     user.status = status.trim();
 
     const updatedUser = await user.save();
-
-    // Success response
     return res.status(200).json({
       status: 200,
       message: "User updated successfully",
       data: {
-        _id: updatedUser._id, // Changed from 'id' to '_id' for consistency
+        _id: updatedUser._id,
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
@@ -282,7 +262,6 @@ export const updateUser = async (req, res) => {
   } catch (error) {
     console.error("Error updating user:", error);
 
-    // Handle mongoose validation error in same format
     if (error.name === "ValidationError") {
       const missingFields = Object.keys(error.errors).map((key) => ({
         name: key,
@@ -295,7 +274,6 @@ export const updateUser = async (req, res) => {
       });
     }
 
-    // Handle duplicate key error (email uniqueness)
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({

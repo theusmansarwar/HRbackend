@@ -8,8 +8,6 @@ const router = express.Router();
 console.log("protect:", typeof protect);
 console.log("verifyRole:", typeof verifyRole);
 console.log("rolesController:", typeof rolesController);
-
-
 // Only Admin can manage roles
 router.post("/createRole", protect, verifyRole(["HR"]), rolesController.createRole);
 router.get("/getRole", protect, verifyRole(["HR"]), rolesController.getAllRoles);

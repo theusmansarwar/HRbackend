@@ -41,19 +41,15 @@ export const createAttendance = async (req, res) => {
         missingFields,
       });
     }
-
-    // ✅ Check valid ObjectId
     if (!mongoose.Types.ObjectId.isValid(employeeId)) {
       return res.status(400).json({ status: 400, message: "Invalid Employee ID format" });
     }
 
-    // ✅ Check if employee exists
     const employeeExists = await Employee.findById(employeeId);
     if (!employeeExists) {
       return res.status(404).json({ status: 404, message: "Employee not found" });
     }
 
-    // ✅ Generate unique Attendance ID (like ATT-0001)
     const lastAttendance = await Attendance.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     if (lastAttendance?.attendanceId) {
@@ -62,7 +58,6 @@ export const createAttendance = async (req, res) => {
     }
     const attendanceId = `ATT-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // ✅ Create Attendance Record
     const attendance = await Attendance.create({
       attendanceId,
       employeeId,
@@ -75,7 +70,7 @@ export const createAttendance = async (req, res) => {
 
     return res.status(201).json({
       status: 201,
-      message: "Attendance created successfully ✅",
+      message: "Attendance created successfully",
       data: attendance,
     });
   } catch (error) {
@@ -87,9 +82,6 @@ export const createAttendance = async (req, res) => {
   }
 };
 
-// =============================
-// UPDATE ATTENDANCE
-// =============================
 export const updateAttendance = async (req, res) => {
   try {
     const { id } = req.params;
@@ -117,7 +109,6 @@ export const updateAttendance = async (req, res) => {
     if (overtimeHours === undefined || overtimeHours === null || overtimeHours === "")
       missingFields.push({ name: "overtimeHours", message: "Overtime Hours are required" });
 
-    // 🔴 If missing any required fields
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
@@ -126,24 +117,19 @@ export const updateAttendance = async (req, res) => {
       });
     }
 
-    // ✅ Validate employeeId format
     if (!mongoose.Types.ObjectId.isValid(employeeId)) {
       return res.status(400).json({ status: 400, message: "Invalid Employee ID format" });
     }
 
-    // ✅ Check if attendance record exists
     const attendanceRecord = await Attendance.findById(id);
     if (!attendanceRecord) {
       return res.status(404).json({ status: 404, message: "Attendance record not found" });
     }
 
-    // ✅ Check if employee exists
     const employeeExists = await Employee.findById(employeeId);
     if (!employeeExists) {
       return res.status(404).json({ status: 404, message: "Employee not found" });
     }
-
-    // ✅ Update Attendance Record
     const updatedAttendance = await Attendance.findByIdAndUpdate(
       id,
       {
@@ -159,7 +145,7 @@ export const updateAttendance = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
-      message: "Attendance updated successfully ✅",
+      message: "Attendance updated successfully",
       data: updatedAttendance,
     });
   } catch (error) {
@@ -171,26 +157,19 @@ export const updateAttendance = async (req, res) => {
   }
 };
 
-
-// READ ACTIVE ATTENDANCE LIST (with pagination + populate)
 export const getAttendanceList = async (req, res) => {
   try {
-    // Extract query parameters safely
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const search = req.query.search?.trim() || "";
-
-    // Base filter for non-archived attendance records
     const baseFilter = { isArchived: false };
 
-    // Fetch attendance records with populated employee info
     let attendanceList = await Attendance.find(baseFilter)
       .populate("employeeId", "firstName lastName email")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // Apply manual search filtering (post-populate)
     if (search) {
       const regex = new RegExp(search, "i");
       attendanceList = attendanceList.filter(
@@ -203,12 +182,10 @@ export const getAttendanceList = async (req, res) => {
       );
     }
 
-    // Get total count for pagination
     const total = await Attendance.countDocuments(baseFilter);
 
-    // Send structured response
     return res.status(200).json({
-      message: "Active attendance list fetched successfully ✅",
+      message: "Active attendance list fetched successfully ",
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
@@ -221,8 +198,6 @@ export const getAttendanceList = async (req, res) => {
   }
 };
 
-
-// READ ARCHIVED ATTENDANCE LIST (with pagination + populate)
 export const getArchivedAttendances = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -247,7 +222,6 @@ export const getArchivedAttendances = async (req, res) => {
   }
 };
 
-// GET SINGLE ATTENDANCE BY ID (with populate)
 export const getAttendanceById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -261,8 +235,6 @@ export const getAttendanceById = async (req, res) => {
   }
 };
 
-
-// SOFT DELETE ATTENDANCE
 export const deleteAttendance = async (req, res) => {
   try {
     const { id } = req.params;

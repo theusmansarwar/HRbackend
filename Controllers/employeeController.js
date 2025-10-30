@@ -1,6 +1,5 @@
 import Employee from "../Models/employeeModel.js";
 
-// CREATE EMPLOYEE
 const createEmployee = async (req, res) => {
   try {
     const {
@@ -22,7 +21,6 @@ const createEmployee = async (req, res) => {
       emergencyContactNo,
     } = req.body;
 
-    // ✅ VALIDATIONS
     const requiredFields = [
       "firstName",
       "lastName",
@@ -64,7 +62,6 @@ const createEmployee = async (req, res) => {
       });
     }
 
-    // ✅ Check if email already exists
     const existingEmployee = await Employee.findOne({ email, isArchived: false });
     if (existingEmployee) {
       return res.status(400).json({
@@ -79,7 +76,6 @@ const createEmployee = async (req, res) => {
       });
     }
 
-    // ✅ Generate unique employeeId like "EMP-0001"
     const lastEmployee = await Employee.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
 
@@ -92,7 +88,6 @@ const createEmployee = async (req, res) => {
 
     const employeeId = `EMP-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // ✅ Create new employee
     const employee = await Employee.create({
       employeeId,
       firstName,
@@ -128,14 +123,12 @@ const createEmployee = async (req, res) => {
   }
 };
 
-// READ ACTIVE EMPLOYEES
  const getEmployeeList = async (req, res) => {
   try {
-    // Query Params
+
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
-    const search = req.query.search || ""; // search keyword
-    // Build filter condition
+    const search = req.query.search || ""; 
     const filter = {
       isArchived: false,
       $or: [
@@ -145,16 +138,15 @@ const createEmployee = async (req, res) => {
         { phoneNumber: { $regex: search, $options: "i" } },
       ],
     };
-    // Total count for pagination
+
     const total = await Employee.countDocuments(filter);
-    // Fetch filtered + paginated employees
     const employees = await Employee.find(filter)
       .populate("departmentId", "departmentName")
       .populate("designationId", "designationName")
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip((page - 1) * limit);
-    // Send response
+
     return res.status(200).json({
       message: "Active Employees Fetched",
       total,
@@ -169,8 +161,6 @@ const createEmployee = async (req, res) => {
   }
 };
 
-
-// READ ARCHIVED EMPLOYEES
 const getArchivedEmployees = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -197,7 +187,6 @@ const getArchivedEmployees = async (req, res) => {
   }
 };
 
-// GET SINGLE EMPLOYEE
 const getEmployeeById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -217,7 +206,6 @@ const getEmployeeById = async (req, res) => {
   }
 };
 
-// UPDATE EMPLOYEE
 const updateEmployee = async (req, res) => {
   try {
     const { id } = req.params;
@@ -288,7 +276,7 @@ const updateEmployee = async (req, res) => {
     });
   }
 };
-// SOFT DELETE EMPLOYEE
+
 const deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params;

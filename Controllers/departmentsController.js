@@ -103,7 +103,6 @@ export const getArchivedDepartments = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    // Fixed: using isArchived instead of archiveDepartment
     const archived = await Department.find({ isArchived: true })
       .sort({ createdAt: -1 })
       .skip(parseInt(skip))

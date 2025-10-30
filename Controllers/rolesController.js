@@ -1,6 +1,5 @@
 import Role from "../Models/Roles.js";
 
-// -------------------- CREATE ROLE --------------------
 export const createRole = async (req, res) => {
   try {
     const { name, modules, description, status } = req.body;
@@ -54,49 +53,32 @@ export const createRole = async (req, res) => {
   }
 };
 
-// -------------------- GET ALL ROLES --------------------
-// const getAllRoles = async (req, res) => {
-//   try {
-//     const roles = await Role.find();
-//     res.json(roles);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error while fetching roles" });
-//   }
-// };
-
 const getAllRoles = async (req, res) => {
   try {
     // Extract query parameters safely
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const search = req.query.search?.trim() || "";
+    const baseFilter = {}; 
 
-    // Base filter (if you have an archive flag, otherwise fetch all)
-    const baseFilter = {}; // e.g., { isArchived: false } if you track archiving
-
-    // Fetch roles with optional population if needed
     let roles = await Role.find(baseFilter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // Manual search filter
     if (search) {
       const regex = new RegExp(search, "i");
       roles = roles.filter(
         (role) =>
-          regex.test(role.name || "") || // assuming role has a name field
-          regex.test(role.description || "")  // optional field
+          regex.test(role.name || "") || 
+          regex.test(role.description || "")  
       );
     }
 
-    // Total count for pagination
     const total = await Role.countDocuments(baseFilter);
 
-    // Send structured response
     return res.status(200).json({
-      message: "Roles fetched successfully ✅",
+      message: "Roles fetched successfully",
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
@@ -109,7 +91,6 @@ const getAllRoles = async (req, res) => {
   }
 };
 
-// -------------------- GET ROLE BY ID --------------------
 const getRoleById = async (req, res) => {
   try {
     const role = await Role.findById(req.params.id);
@@ -121,7 +102,6 @@ const getRoleById = async (req, res) => {
   }
 };
 
-// -------------------- UPDATE ROLE --------------------
 export const updateRole = async (req, res) => {
   try {
     const { id } = req.params;
@@ -180,7 +160,6 @@ export const updateRole = async (req, res) => {
   }
 };
 
-// -------------------- DELETE ROLE --------------------
 const deleteRole = async (req, res) => {
   try {
     const role = await Role.findByIdAndDelete(req.params.id);

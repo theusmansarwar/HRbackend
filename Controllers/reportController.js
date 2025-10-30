@@ -1,6 +1,5 @@
 import Report from "../Models/reports.js";
 
-//  CREATE REPORT
 export const createReport = async (req, res) => {
   try {
     const report = new Report(req.body);
@@ -11,7 +10,6 @@ export const createReport = async (req, res) => {
   }
 };
 
-// GET ALL REPORTS
 export const getReports = async (req, res) => {
   try {
     const reports = await Report.find().sort({ createdAt: -1 });
@@ -21,7 +19,6 @@ export const getReports = async (req, res) => {
   }
 };
 
-// GET SINGLE REPORT (for viewing or editing)
 export const getReportById = async (req, res) => {
   try {
     const report = await Report.findById(req.params.id);
@@ -32,13 +29,12 @@ export const getReportById = async (req, res) => {
   }
 };
 
-// UPDATE REPORT
 export const updateReport = async (req, res) => {
   try {
     const updated = await Report.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true } // return updated version
+      { new: true } 
     );
     if (!updated) return res.status(404).json({ message: "Report not found" });
     res.status(200).json({ message: "Report updated successfully", report: updated });
@@ -47,7 +43,6 @@ export const updateReport = async (req, res) => {
   }
 };
 
-// 🗑 DELETE REPORT
 export const deleteReport = async (req, res) => {
   try {
     const deleted = await Report.findByIdAndDelete(req.params.id);

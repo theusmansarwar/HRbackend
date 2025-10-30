@@ -1,7 +1,5 @@
 import Training from "../Models/trainingModel.js";
 
-
-// CREATE TRAINING
 export const createTraining = async (req, res) => {
   try {
     const { employeeId, trainingName, startDate, endDate, status } = req.body;
@@ -192,14 +190,14 @@ export const getTrainingList = async (req, res) => {
       pipeline.push({
         $match: {
           $or: [
-            { trainingId: regex },                     // Training ID
-            { trainingName: regex },                   // Training Name
-            { certificate: regex },                    // Certificate
-            { status: regex },                         // Status (Completed, In Progress, Pending)
-            { "employeeInfo.firstName": regex },       // Employee first name
-            { "employeeInfo.lastName": regex },        // Employee last name
-            { "employeeInfo.email": regex },           // Employee email
-            { "employeeInfo.employeeId": regex },      // Employee ID
+            { trainingId: regex },                    
+            { trainingName: regex },                 
+            { certificate: regex },                    
+            { status: regex },                         
+            { "employeeInfo.firstName": regex },       
+            { "employeeInfo.lastName": regex },       
+            { "employeeInfo.email": regex },          
+            { "employeeInfo.employeeId": regex },     
           ],
         },
       });
@@ -312,7 +310,7 @@ export const deleteTraining = async (req, res) => {
     if (!training)
       return res.status(404).json({ message: "Training not found" });
 
-    training.isArchived = true; // mark as archived instead of delete
+    training.isArchived = true;
     await training.save();
 
     return res

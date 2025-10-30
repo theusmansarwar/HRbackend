@@ -1,10 +1,6 @@
 import Payroll from "../Models/payrollModel.js";
 
- 
 
-// =============================
-// CREATE PAYROLL
-// =============================
 export const createPayroll = async (req, res) => {
   try {
     const {
@@ -106,9 +102,6 @@ export const createPayroll = async (req, res) => {
   }
 };
 
-// =============================
-// UPDATE PAYROLL
-// =============================
 export const updatePayroll = async (req, res) => {
   try {
     const { id } = req.params;
@@ -198,22 +191,17 @@ export const updatePayroll = async (req, res) => {
 
 export const getPayrollList = async (req, res) => {
   try {
-    // Extract query parameters safely
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const search = req.query.search?.trim() || "";
-
-    // Base filter for active payrolls
     const baseFilter = { isArchived: false };
 
-    // Fetch payrolls with populated employee info
     let payrolls = await Payroll.find(baseFilter)
       .populate("employeeId", "firstName lastName email")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // Manual search filter (since populate runs post-query)
     if (search) {
       const regex = new RegExp(search, "i");
       payrolls = payrolls.filter(
@@ -226,10 +214,7 @@ export const getPayrollList = async (req, res) => {
       );
     }
 
-    // Total count for pagination
     const total = await Payroll.countDocuments(baseFilter);
-
-    // Send response
     return res.status(200).json({
       message: "Active payrolls fetched successfully",
       total,
@@ -244,8 +229,6 @@ export const getPayrollList = async (req, res) => {
   }
 };
 
-
-// READ ARCHIVED PAYROLLS (with pagination)
 export const getArchivedPayrolls = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -271,7 +254,6 @@ export const getArchivedPayrolls = async (req, res) => {
   }
 };
 
-// GET SINGLE PAYROLL BY ID
 export const getPayrollById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -294,8 +276,6 @@ export const getPayrollById = async (req, res) => {
   }
 };
 
-
-// SOFT DELETE PAYROLL
 export const deletePayroll = async (req, res) => {
   try {
     const { id } = req.params;
@@ -303,7 +283,7 @@ export const deletePayroll = async (req, res) => {
     const payroll = await Payroll.findById(id);
     if (!payroll) return res.status(404).json({ message: "Payroll not found" });
 
-    payroll.isArchived = true; // Soft delete
+    payroll.isArchived = true;
     await payroll.save();
 
     return res.status(200).json({

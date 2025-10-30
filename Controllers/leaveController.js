@@ -60,7 +60,7 @@ export const createLeave = async (req, res) => {
 
     return res.status(201).json({
       status: 201,
-      message: "Leave created successfully ✅",
+      message: "Leave created successfully",
       data: leave,
     });
   } catch (error) {
@@ -116,7 +116,7 @@ export const updateLeave = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
-      message: "Leave updated successfully ✅",
+      message: "Leave updated successfully",
       data: updatedLeave,
     });
   } catch (error) {
@@ -173,7 +173,7 @@ export const getLeaveList = async (req, res) => {
     const total = await Leave.countDocuments(baseFilter);
 
     return res.status(200).json({
-      message: "Active leaves fetched successfully ✅",
+      message: "Active leaves fetched successfully",
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,

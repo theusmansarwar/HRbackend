@@ -1,6 +1,5 @@
 import Job from "../Models/jobModel.js";
 
- 
 export const createJob = async (req, res) => {
   try {
     const {
@@ -220,7 +219,6 @@ export const getJobList = async (req, res) => {
       { $unwind: { path: "$designationInfo", preserveNullAndEmptyArrays: true } },
     ];
 
-    // Add search filter if search query exists
     if (search) {
       const regex = new RegExp(search, "i");
       pipeline.push({
@@ -238,19 +236,16 @@ export const getJobList = async (req, res) => {
       });
     }
 
-    // Get total count
     const countPipeline = [...pipeline, { $count: "total" }];
     const countResult = await Job.aggregate(countPipeline);
     const total = countResult.length > 0 ? countResult[0].total : 0;
 
-    // Add sorting, skip, and limit
     pipeline.push(
       { $sort: { createdAt: -1 } },
       { $skip: skip },
       { $limit: limit }
     );
 
-    // Project to reshape the output
     pipeline.push({
       $project: {
         _id: 1,
@@ -352,7 +347,7 @@ export const deleteJob = async (req, res) => {
     const job = await Job.findById(id);
     if (!job) return res.status(404).json({ message: "Job not found" });
 
-    job.isArchived = true; // mark as archived instead of deleting
+    job.isArchived = true;
     await job.save();
 
     res.status(200).json({ message: "Job archived successfully" });
@@ -360,12 +355,3 @@ export const deleteJob = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
-// module.exports = {
-//   createJob,
-//   getJobList,
-//   getArchivedJobs,
-//   getJobById,
-//   updateJob,
-//   deleteJob,
-// };

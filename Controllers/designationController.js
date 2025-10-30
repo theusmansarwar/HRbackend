@@ -154,7 +154,6 @@ export const updateDesignation = async (req, res) => {
     const { id } = req.params;
     const { designationName, departmentId, status } = req.body;
 
-    // ✅ Check if exists
     const designation = await Designation.findById(id);
     if (!designation) {
       return res.status(404).json({
@@ -162,8 +161,6 @@ export const updateDesignation = async (req, res) => {
         message: "Designation not found",
       });
     }
-
-    // ✅ Validate missing fields
     const missingFields = [];
     if (!designationName)
       missingFields.push({
@@ -189,7 +186,6 @@ export const updateDesignation = async (req, res) => {
       });
     }
 
-    // ✅ Update data
     Object.assign(designation, req.body, { updatedDate: new Date() });
     const updatedDesignation = await designation.save();
 

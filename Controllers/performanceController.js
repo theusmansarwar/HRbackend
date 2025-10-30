@@ -41,7 +41,6 @@ export const createPerformance = async (req, res) => {
     if (!employeeExists)
       return res.status(404).json({ message: "Employee not found" });
 
-    // 🔹 Generate unique performanceId
     const lastPerformance = await Performance.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     if (lastPerformance?.performanceId) {
@@ -183,7 +182,6 @@ export const getPerformanceList = async (req, res) => {
   }
 };
 
-// GET SINGLE PERFORMANCE BY ID
 export const getPerformanceById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -236,7 +234,6 @@ export const updatePerformance = async (req, res) => {
     if (!status)
       missingFields.push({ name: "status", message: "Status is required" });
 
-    // ✅ If validation fails, return errors
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
@@ -245,19 +242,16 @@ export const updatePerformance = async (req, res) => {
       });
     }
 
-    // ✅ Check if performance record exists
     const performanceRecord = await Performance.findById(id);
     if (!performanceRecord) {
       return res.status(404).json({ message: "Performance record not found" });
     }
 
-    // ✅ Check if employee exists
     const employeeExists = await Employee.findById(employeeId);
     if (!employeeExists) {
       return res.status(404).json({ message: "Employee not found" });
     }
 
-    // ✅ Update performance record
     const updatedPerformance = await Performance.findByIdAndUpdate(
       id,
       {
@@ -276,7 +270,7 @@ export const updatePerformance = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
-      message: "Performance updated successfully ✅",
+      message: "Performance updated successfully",
       data: updatedPerformance,
     });
   } catch (error) {
@@ -288,10 +282,6 @@ export const updatePerformance = async (req, res) => {
   }
 };
 
-
-
-
-// SOFT DELETE PERFORMANCE
 export const deletePerformance = async (req, res) => {
   try {
     const { id } = req.params;
@@ -310,7 +300,6 @@ export const deletePerformance = async (req, res) => {
   }
 };
 
-// GET ARCHIVED PERFORMANCE RECORDS
 export const getArchivedPerformance = async (req, res) => {
   try {
     const archivedList = await Performance.find({ status: "Archived" })

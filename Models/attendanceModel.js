@@ -20,11 +20,11 @@ const attendanceSchema = new mongoose.Schema(
       default: "Present",
     },
     checkInTime: {
-      type: String, // e.g., "09:00"
+      type: String, 
       required: true,
     },
     checkOutTime: {
-      type: String, // e.g., "18:00"
+      type: String, 
       required: true,
     },
     shiftName: {
