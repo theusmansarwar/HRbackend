@@ -12,7 +12,13 @@ export const protect = async (req, res, next) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    req.user = user; // Attach full user data
+    req.user = {
+  _id: user._id,
+  name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+  email: user.email,
+  role: user.role || "User",
+};
+
     next();
   } catch (error) {
     res.status(401).json({ message: "Invalid token", error });

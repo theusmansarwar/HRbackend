@@ -119,6 +119,8 @@ export const updateFine = async (req, res) => {
       });
     }
 
+    req.oldData = fine.toObject();
+
     fine.employeeId = employeeId;
     fine.fineType = fineType;
     fine.fineAmount = Number(fineAmount);
@@ -292,6 +294,8 @@ export const deleteFine = async (req, res) => {
         message: "Fine not found",
       });
     }
+
+    req.oldData = fine.toObject();
 
     fine.archiveFine = true;
     await fine.save();

@@ -18,6 +18,7 @@ import trainingRouter from "./Routes/trainingRouter.js";
 import userRouter from "./Routes/userRouter.js";
 import roleRouter from "./Routes/rolesRouter.js";
 import fineRouter from "./Routes/fineRouter.js";
+import activityRouter from "./Routes/activityRouter.js"
 
 
 const app = express();
@@ -46,6 +47,7 @@ app.use("/reports", reportsRouter);
 app.use("/users", userRouter);
 app.use("/roles", roleRouter);
 app.use("/fines", fineRouter);
+app.use("/activities",activityRouter)
 
 connectDB().then(() => {
   app.listen(port, () => {
