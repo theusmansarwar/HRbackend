@@ -3,26 +3,191 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Role from "../Models/Roles.js";
 
+const ValidationRules = {
+  name: {
+    pattern: /^[a-zA-Z\s\-']+$/,
+    minLength: 2,
+    maxLength: 50,
+    message: "Name must contain only letters, spaces, hyphens, and apostrophes (2-50 characters)",
+  },
+  
+  email: {
+    pattern: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+    message: "Please enter a valid email address (e.g., user@example.com)",
+  },
+  
+  password: {
+    minLength: 8,
+    maxLength: 128,
+    pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]+$/,
+    message: "Password must be 8+ characters with uppercase, lowercase, number, and special character (@$!%*?&#)",
+  },
+  
+  // Role validation
+  role: {
+    minLength: 2,
+    maxLength: 30,
+    pattern: /^[a-zA-Z\s]+$/,
+    message: "Role must contain only letters and spaces (2-30 characters)",
+  },
+  
+  // Status validation
+  status: {
+    allowedValues: ['Active', 'Inactive', 'active', 'inactive'],
+    message: "Status must be either 'Active' or 'Inactive'",
+  },
+};
+
+// Validate name
+const validateName = (name, fieldName = "Name") => {
+  if (!name || !name.trim()) {
+    return { valid: false, message: `${fieldName} is required` };
+  }
+  
+  const trimmedName = name.trim();
+  
+  if (trimmedName.length < ValidationRules.name.minLength) {
+    return { valid: false, message: `${fieldName} must be at least ${ValidationRules.name.minLength} characters` };
+  }
+  
+  if (trimmedName.length > ValidationRules.name.maxLength) {
+    return { valid: false, message: `${fieldName} must not exceed ${ValidationRules.name.maxLength} characters` };
+  }
+  
+  if (!ValidationRules.name.pattern.test(trimmedName)) {
+    return { valid: false, message: ValidationRules.name.message };
+  }
+  
+  return { valid: true, value: trimmedName };
+};
+
+// Validate email
+const validateEmail = (email) => {
+  if (!email || !email.trim()) {
+    return { valid: false, message: "Email is required" };
+  }
+  
+  const trimmedEmail = email.trim().toLowerCase();
+  
+  if (!ValidationRules.email.pattern.test(trimmedEmail)) {
+    return { valid: false, message: ValidationRules.email.message };
+  }
+  
+  return { valid: true, value: trimmedEmail };
+};
+
+// Validate password
+const validatePassword = (password) => {
+  if (!password || !password.trim()) {
+    return { valid: false, message: "Password is required" };
+  }
+  
+  const trimmedPassword = password.trim();
+  
+  if (trimmedPassword.length < ValidationRules.password.minLength) {
+    return { valid: false, message: `Password must be at least ${ValidationRules.password.minLength} characters` };
+  }
+  
+  if (trimmedPassword.length > ValidationRules.password.maxLength) {
+    return { valid: false, message: `Password must not exceed ${ValidationRules.password.maxLength} characters` };
+  }
+  
+  if (!ValidationRules.password.pattern.test(trimmedPassword)) {
+    return { valid: false, message: ValidationRules.password.message };
+  }
+  
+  return { valid: true, value: trimmedPassword };
+};
+
+// Validate role
+const validateRole = (role) => {
+  if (!role || !role.trim()) {
+    return { valid: false, message: "Role is required" };
+  }
+  
+  const trimmedRole = role.trim();
+  
+  if (trimmedRole.length < ValidationRules.role.minLength) {
+    return { valid: false, message: `Role must be at least ${ValidationRules.role.minLength} characters` };
+  }
+  
+  if (trimmedRole.length > ValidationRules.role.maxLength) {
+    return { valid: false, message: `Role must not exceed ${ValidationRules.role.maxLength} characters` };
+  }
+  
+  if (!ValidationRules.role.pattern.test(trimmedRole)) {
+    return { valid: false, message: ValidationRules.role.message };
+  }
+  
+  return { valid: true, value: trimmedRole };
+};
+
+// Validate status
+const validateStatus = (status) => {
+  if (!status || !status.trim()) {
+    return { valid: false, message: "Status is required" };
+  }
+  
+  const trimmedStatus = status.trim();
+  
+  if (!ValidationRules.status.allowedValues.includes(trimmedStatus)) {
+    return { valid: false, message: ValidationRules.status.message };
+  }
+  
+  // Normalize to capitalized format
+  const normalizedStatus = trimmedStatus.charAt(0).toUpperCase() + trimmedStatus.slice(1).toLowerCase();
+  
+  return { valid: true, value: normalizedStatus };
+};
+
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     const missingFields = [];
-    if (!email) missingFields.push("email");
-    if (!password) missingFields.push("password");
-    if (missingFields.length > 0)
+
+    // Validate Email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      missingFields.push({ name: "email", message: emailValidation.message });
+    }
+
+    // Validate Password
+    if (!password || !password.trim()) {
+      missingFields.push({ name: "password", message: "Password is required" });
+    }
+
+    if (missingFields.length > 0) {
       return res.status(400).json({
-        message: `Missing required fields: ${missingFields.join(", ")}`,
+        status: 400,
+        message: "Validation failed. Please correct the errors.",
         missingFields,
       });
+    }
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid Credentials" });
-    if (user.status === "inactive")
-      return res.status(403).json({ message: "User inactive" });
+    const user = await User.findOne({ email: emailValidation.value });
+    if (!user) {
+      return res.status(400).json({
+        status: 400,
+        message: "Invalid Credentials",
+        missingFields: [{ name: "email", message: "Invalid email or password" }],
+      });
+    }
+
+    if (user.status === "Inactive" || user.status === "inactive") {
+      return res.status(403).json({
+        status: 403,
+        message: "Account is inactive. Please contact administrator.",
+      });
+    }
 
     const validPass = await bcrypt.compare(password, user.password);
-    if (!validPass)
-      return res.status(400).json({ message: "Invalid Credentials" });
+    if (!validPass) {
+      return res.status(400).json({
+        status: 400,
+        message: "Invalid Credentials",
+        missingFields: [{ name: "password", message: "Invalid email or password" }],
+      });
+    }
 
     const roleData = await Role.findOne({ name: user.role });
 
@@ -44,38 +209,69 @@ const loginUser = async (req, res) => {
       token,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Login error:", err);
+    res.status(500).json({
+      status: 500,
+      message: "Server error during login",
+    });
   }
 };
 
 export const signupUser = async (req, res) => {
   try {
     const { name, email, password, role, status = "Active" } = req.body;
-
     const missingFields = [];
-    if (!name?.trim()) missingFields.push({ name: "name", message: "Name is required" });
-    if (!email?.trim()) missingFields.push({ name: "email", message: "Email is required" });
-    if (!password?.trim()) missingFields.push({ name: "password", message: "Password is required" });
-    if (!role?.trim()) missingFields.push({ name: "role", message: "Role is required" });
 
+    // Validate Name
+    const nameValidation = validateName(name, "Name");
+    if (!nameValidation.valid) {
+      missingFields.push({ name: "name", message: nameValidation.message });
+    }
+
+    // Validate Email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      missingFields.push({ name: "email", message: emailValidation.message });
+    }
+
+    // Validate Password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      missingFields.push({ name: "password", message: passwordValidation.message });
+    }
+
+    // Validate Role
+    const roleValidation = validateRole(role);
+    if (!roleValidation.valid) {
+      missingFields.push({ name: "role", message: roleValidation.message });
+    }
+
+    // Validate Status
+    const statusValidation = validateStatus(status);
+    if (!statusValidation.valid) {
+      missingFields.push({ name: "status", message: statusValidation.message });
+    }
+
+    // Return validation errors
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
-        message: "Missing required fields",
+        message: "Validation failed. Please correct the errors.",
         missingFields,
       });
     }
 
-    const existingUser = await User.findOne({ email: email.trim() });
+    // Check for existing email
+    const existingUser = await User.findOne({ email: emailValidation.value });
     if (existingUser) {
       return res.status(400).json({
         status: 400,
         message: "Email already exists",
-        missingFields: [{ name: "email", message: "Email already exists" }],
+        missingFields: [{ name: "email", message: "This email is already registered" }],
       });
     }
 
+    // Generate unique userId
     const lastUser = await User.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     
@@ -87,17 +283,19 @@ export const signupUser = async (req, res) => {
     }
 
     const userId = `USR-${newIdNumber.toString().padStart(3, "0")}`;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(passwordValidation.value, 10);
+    
     const newUser = new User({
       userId,
-      name: name.trim(),
-      email: email.trim(),
+      name: nameValidation.value,
+      email: emailValidation.value,
       password: hashedPassword,
-      role: role.trim(),
-      status: status.trim(),
+      role: roleValidation.value,
+      status: statusValidation.value,
     });
     
     await newUser.save();
+    
     return res.status(201).json({
       status: 201,
       message: "User created successfully",
@@ -150,10 +348,6 @@ const getAllUsers = async (req, res) => {
 
     const baseFilter = {};
 
-    const allUsers = await User.find({}).select("name email status role");
-    console.log("=== ALL USERS IN DATABASE ===");
-    console.log(JSON.stringify(allUsers, null, 2));
-
     if (search) {
       const regex = new RegExp(search, "i");
       baseFilter.$or = [
@@ -163,8 +357,6 @@ const getAllUsers = async (req, res) => {
         { role: regex },
         { status: regex },
       ];
-      
-      console.log("Search query:", search);
     }
 
     const users = await User.find(baseFilter)
@@ -173,11 +365,10 @@ const getAllUsers = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    console.log("Found users:", users.length);
-
     const total = await User.countDocuments(baseFilter);
 
     return res.status(200).json({
+      status: 200,
       message: "Users fetched successfully",
       total,
       totalPages: Math.ceil(total / limit),
@@ -187,9 +378,10 @@ const getAllUsers = async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching users:", err);
-    return res.status(500).json({ 
+    return res.status(500).json({
+      status: 500,
       message: "Error fetching users",
-      error: err.message 
+      error: err.message,
     });
   }
 };
@@ -197,10 +389,25 @@ const getAllUsers = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
-    res.json(user);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        message: "User not found",
+      });
+    }
+    
+    res.json({
+      status: 200,
+      message: "Profile fetched successfully",
+      data: user,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error fetching user profile" });
+    console.error("Error fetching profile:", err);
+    res.status(500).json({
+      status: 500,
+      message: "Error fetching user profile",
+    });
   }
 };
 
@@ -208,17 +415,37 @@ export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, email, role, status } = req.body;
-
     const missingFields = [];
-    if (!name?.trim()) missingFields.push({ name: "name", message: "Name is required" });
-    if (!email?.trim()) missingFields.push({ name: "email", message: "Email is required" });
-    if (!role?.trim()) missingFields.push({ name: "role", message: "Role is required" });
-    if (!status?.trim()) missingFields.push({ name: "status", message: "Status is required" });
 
+    // Validate Name
+    const nameValidation = validateName(name, "Name");
+    if (!nameValidation.valid) {
+      missingFields.push({ name: "name", message: nameValidation.message });
+    }
+
+    // Validate Email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      missingFields.push({ name: "email", message: emailValidation.message });
+    }
+
+    // Validate Role
+    const roleValidation = validateRole(role);
+    if (!roleValidation.valid) {
+      missingFields.push({ name: "role", message: roleValidation.message });
+    }
+
+    // Validate Status
+    const statusValidation = validateStatus(status);
+    if (!statusValidation.valid) {
+      missingFields.push({ name: "status", message: statusValidation.message });
+    }
+
+    // Return validation errors
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
-        message: "Missing required fields",
+        message: "Validation failed. Please correct the errors.",
         missingFields,
       });
     }
@@ -231,28 +458,31 @@ export const updateUser = async (req, res) => {
       });
     }
 
-    if (email !== user.email) {
-      const existingUser = await User.findOne({ email });
+    // Check if email is being changed and if it already exists
+    if (emailValidation.value !== user.email) {
+      const existingUser = await User.findOne({ email: emailValidation.value });
       if (existingUser) {
         return res.status(400).json({
           status: 400,
           message: "Email already exists",
-          missingFields: [{ name: "email", message: "Email already exists" }],
+          missingFields: [{ name: "email", message: "This email is already registered" }],
         });
       }
     }
 
-    user.name = name.trim();
-    user.email = email.trim();
-    user.role = role.trim();
-    user.status = status.trim();
+    user.name = nameValidation.value;
+    user.email = emailValidation.value;
+    user.role = roleValidation.value;
+    user.status = statusValidation.value;
 
     const updatedUser = await user.save();
+    
     return res.status(200).json({
       status: 200,
       message: "User updated successfully",
       data: {
         _id: updatedUser._id,
+        userId: updatedUser.userId,
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
@@ -293,11 +523,24 @@ export const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.json({ message: "User deleted successfully" });
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        message: "User not found",
+      });
+    }
+    
+    res.json({
+      status: 200,
+      message: "User deleted successfully",
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error deleting user" });
+    console.error("Error deleting user:", err);
+    res.status(500).json({
+      status: 500,
+      message: "Error deleting user",
+    });
   }
 };
 

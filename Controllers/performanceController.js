@@ -2,7 +2,6 @@
 import Performance from "../Models/performanceModel.js";
 import Employee from "../Models/employeeModel.js";
 
-// ✅ PROFESSIONAL VALIDATION HELPERS FOR PERFORMANCE
 const ValidationRules = {
   // KPIs validation: Array of strings
   kpis: {
@@ -200,7 +199,6 @@ const validateStatus = (status) => {
   return { valid: true };
 };
 
-// ✅ CREATE PERFORMANCE WITH PROFESSIONAL VALIDATION
 export const createPerformance = async (req, res) => {
   try {
     const {
@@ -259,7 +257,6 @@ export const createPerformance = async (req, res) => {
       missingFields.push({ name: "status", message: statusValidation.message });
     }
 
-    // Return all validation errors
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
@@ -268,7 +265,6 @@ export const createPerformance = async (req, res) => {
       });
     }
 
-    // Check if employee exists
     const employeeExists = await Employee.findById(employeeId.trim());
     if (!employeeExists) {
       return res.status(404).json({
@@ -278,7 +274,6 @@ export const createPerformance = async (req, res) => {
       });
     }
 
-    // Check if reviewer exists (if provided)
     if (reviewerId && reviewerId.trim()) {
       const reviewerExists = await Employee.findById(reviewerId.trim());
       if (!reviewerExists) {
@@ -290,7 +285,6 @@ export const createPerformance = async (req, res) => {
       }
     }
 
-    // Generate unique performanceId
     const lastPerformance = await Performance.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     if (lastPerformance?.performanceId) {
@@ -299,7 +293,6 @@ export const createPerformance = async (req, res) => {
     }
     const performanceId = `PERF-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // Create performance record
     const performance = await Performance.create({
       performanceId,
       employeeId: employeeId.trim(),
@@ -326,7 +319,6 @@ export const createPerformance = async (req, res) => {
   }
 };
 
-// ✅ UPDATE PERFORMANCE WITH PROFESSIONAL VALIDATION
 export const updatePerformance = async (req, res) => {
   try {
     const { id } = req.params;
@@ -351,13 +343,11 @@ export const updatePerformance = async (req, res) => {
 
     const missingFields = [];
 
-    // Validate Employee ID
     const empValidation = validateEmployeeId(employeeId, "Employee");
     if (!empValidation.valid) {
       missingFields.push({ name: "employeeId", message: empValidation.message });
     }
 
-    // Validate Reviewer ID (optional)
     if (reviewerId) {
       const reviewerValidation = validateEmployeeId(reviewerId, "Reviewer");
       if (!reviewerValidation.valid) {
@@ -365,37 +355,31 @@ export const updatePerformance = async (req, res) => {
       }
     }
 
-    // Validate KPIs
     const kpiValidation = validateKPIs(KPIs);
     if (!kpiValidation.valid) {
       missingFields.push({ name: "KPIs", message: kpiValidation.message });
     }
 
-    // Validate Appraisal Date
     const dateValidation = validateAppraisalDate(appraisalDate);
     if (!dateValidation.valid) {
       missingFields.push({ name: "appraisalDate", message: dateValidation.message });
     }
 
-    // Validate Score
     const scoreValidation = validateScore(score);
     if (!scoreValidation.valid) {
       missingFields.push({ name: "score", message: scoreValidation.message });
     }
 
-    // Validate Remarks
     const remarksValidation = validateRemarks(remarks);
     if (!remarksValidation.valid) {
       missingFields.push({ name: "remarks", message: remarksValidation.message });
     }
 
-    // Validate Status
     const statusValidation = validateStatus(status);
     if (!statusValidation.valid) {
       missingFields.push({ name: "status", message: statusValidation.message });
     }
 
-    // Return all validation errors
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
@@ -403,8 +387,6 @@ export const updatePerformance = async (req, res) => {
         missingFields,
       });
     }
-
-    // Check if employee exists
     const employeeExists = await Employee.findById(employeeId.trim());
     if (!employeeExists) {
       return res.status(404).json({
@@ -414,7 +396,6 @@ export const updatePerformance = async (req, res) => {
       });
     }
 
-    // Check if reviewer exists (if provided)
     if (reviewerId && reviewerId.trim()) {
       const reviewerExists = await Employee.findById(reviewerId.trim());
       if (!reviewerExists) {
@@ -426,7 +407,6 @@ export const updatePerformance = async (req, res) => {
       }
     }
 
-    // Update performance record
     const updatedPerformance = await Performance.findByIdAndUpdate(
       id,
       {
@@ -458,7 +438,6 @@ export const updatePerformance = async (req, res) => {
   }
 };
 
-// ✅ OTHER FUNCTIONS (No changes needed)
 export const getPerformanceList = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);

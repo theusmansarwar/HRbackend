@@ -2,7 +2,6 @@ import Application from "../Models/applicationModel.js";
 import path from "path";
 import fs from "fs";
 
-// ✅ PROFESSIONAL VALIDATION HELPERS
 const ValidationRules = {
   // Name validation: Only letters, spaces, hyphens, and apostrophes
   name: {
@@ -154,7 +153,6 @@ const validateDate = (date, fieldName = "Date") => {
   return { valid: true };
 };
 
-// ✅ CREATE APPLICATION WITH PROFESSIONAL VALIDATION
 export const createApplication = async (req, res) => {
   try {
     const {
@@ -299,7 +297,6 @@ export const createApplication = async (req, res) => {
   }
 };
 
-// ✅ UPDATE APPLICATION WITH PROFESSIONAL VALIDATION
 export const updateApplication = async (req, res) => {
   try {
     const { id } = req.params;
@@ -383,7 +380,6 @@ export const updateApplication = async (req, res) => {
       return res.status(404).json({ error: "Application not found" });
     }
 
-    // Validate and update resume if provided
     if (resume) {
       const fileValidation = validateFile(resume);
       if (!fileValidation.valid) {
@@ -395,7 +391,6 @@ export const updateApplication = async (req, res) => {
         });
       }
 
-      // Delete old file
       const oldFilePath = path.join(process.cwd(), 'uploads', application.resume);
       if (fs.existsSync(oldFilePath)) {
         fs.unlinkSync(oldFilePath);
@@ -404,7 +399,6 @@ export const updateApplication = async (req, res) => {
       application.resume = resume.filename;
     }
 
-    // Update fields
     application.jobId = jobId;
     application.applicantName = applicantName.trim();
     application.applicantEmail = applicantEmail.trim().toLowerCase();
@@ -433,7 +427,6 @@ export const updateApplication = async (req, res) => {
   }
 };
 
-// Download resume
 export const downloadResume = async (req, res) => {
   try {
     const { filename } = req.params;
@@ -449,7 +442,6 @@ export const downloadResume = async (req, res) => {
   }
 };
 
-// Other functions remain the same...
 export const getApplicationList = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);

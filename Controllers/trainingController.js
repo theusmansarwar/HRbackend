@@ -212,7 +212,6 @@ export const getArchivedTrainings = async (req, res) => {
   }
 };
 
-// ✅ Get Training by ID
 export const getTrainingById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -234,7 +233,7 @@ export const getTrainingById = async (req, res) => {
   }
 };
 
-// ✅ Delete (Archive) Training
+
 export const deleteTraining = async (req, res) => {
   try {
     const { id } = req.params;
