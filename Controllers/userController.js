@@ -3,7 +3,9 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Role from "../Models/Roles.js";
 
+// ✅ PROFESSIONAL VALIDATION HELPERS
 const ValidationRules = {
+  // Name validation: Only letters, spaces, hyphens, and apostrophes
   name: {
     pattern: /^[a-zA-Z\s\-']+$/,
     minLength: 2,
@@ -11,11 +13,13 @@ const ValidationRules = {
     message: "Name must contain only letters, spaces, hyphens, and apostrophes (2-50 characters)",
   },
   
+  // Email validation: Proper email format
   email: {
     pattern: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     message: "Please enter a valid email address (e.g., user@example.com)",
   },
   
+  // Password validation: Strong password requirements
   password: {
     minLength: 8,
     maxLength: 128,
@@ -140,6 +144,7 @@ const validateStatus = (status) => {
   return { valid: true, value: normalizedStatus };
 };
 
+// ✅ LOGIN USER WITH PROFESSIONAL VALIDATION
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -217,6 +222,7 @@ const loginUser = async (req, res) => {
   }
 };
 
+// ✅ SIGNUP USER WITH PROFESSIONAL VALIDATION
 export const signupUser = async (req, res) => {
   try {
     const { name, email, password, role, status = "Active" } = req.body;
@@ -339,6 +345,7 @@ export const signupUser = async (req, res) => {
   }
 };
 
+// ✅ GET ALL USERS
 const getAllUsers = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -386,6 +393,7 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+// ✅ GET PROFILE
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -411,6 +419,7 @@ const getProfile = async (req, res) => {
   }
 };
 
+// ✅ UPDATE USER WITH PROFESSIONAL VALIDATION
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -520,6 +529,7 @@ export const updateUser = async (req, res) => {
   }
 };
 
+// ✅ DELETE USER
 const deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);

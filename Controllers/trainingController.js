@@ -1,7 +1,6 @@
 import Training from "../Models/trainingModel.js";
 import { logActivity } from "../utils/activityLogger.js";
 
-// ✅ Create Training
 export const createTraining = async (req, res) => {
   try {
     const { employeeId, trainingName, startDate, endDate, status } = req.body;
@@ -64,7 +63,6 @@ export const createTraining = async (req, res) => {
   }
 };
 
-// ✅ Update Training
 export const updateTraining = async (req, res) => {
   try {
     const { id } = req.params;
@@ -134,7 +132,6 @@ export const updateTraining = async (req, res) => {
   }
 };
 
-// ✅ Get All Active Trainings (with pagination & search)
 export const getTrainingList = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -182,7 +179,6 @@ export const getTrainingList = async (req, res) => {
   }
 };
 
-// ✅ Get Archived Trainings
 export const getArchivedTrainings = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
