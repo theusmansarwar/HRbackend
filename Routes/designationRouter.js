@@ -1,6 +1,7 @@
 import express from "express";
+import { protect } from "../Middlewares/authMiddleware.js";
 import {
-  createDesignation,  
+  createDesignation,
   getDesignationList,
   getArchivedDesignations,
   updateDesignation,
@@ -9,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post("/createDesignation", createDesignation);
-router.get("/getDesignations", getDesignationList);
-router.get("/getArchivedDesignations", getArchivedDesignations);
-router.put("/updateDesignation/:id", updateDesignation);
-router.delete("/deleteDesignation/:id", deleteDesignation);
+router.post("/createDesignation", protect, createDesignation);
+router.put("/updateDesignation/:id", protect, updateDesignation);
+router.delete("/deleteDesignation/:id", protect, deleteDesignation);
+router.get("/getDesignations", protect, getDesignationList);
+router.get("/getArchivedDesignations", protect, getArchivedDesignations);
 
 export default router;

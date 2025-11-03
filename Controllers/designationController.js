@@ -1,5 +1,7 @@
 // controllers/designationController.js
 import Designation from "../Models/designationModel.js";
+import { logActivity } from "../utils/activityLogger.js";
+
 
 // ✅ PROFESSIONAL VALIDATION HELPERS FOR DESIGNATIONS
 const ValidationRules = {
@@ -156,6 +158,15 @@ export const createDesignation = async (req, res) => {
       archive: false,
     });
 
+    await logActivity(
+  req.user._id,           
+  "Designations",        
+  "CREATE",            
+  null,                  
+  designation.toObject(), 
+  req                    
+);
+
     return res.status(201).json({
       status: 201,
       message: "Designation created successfully",
@@ -186,6 +197,8 @@ export const updateDesignation = async (req, res) => {
         message: "Designation not found",
       });
     }
+
+
 
     // Validate Designation Name
     const nameValidation = validateDesignationName(designationName);
@@ -244,6 +257,9 @@ export const updateDesignation = async (req, res) => {
       });
     }
 
+    
+    req.oldData = designation.toObject();
+
     // Update designation
     designation.designationName = designationName.trim();
     designation.departmentId = departmentId.trim();
@@ -251,6 +267,8 @@ export const updateDesignation = async (req, res) => {
     designation.updatedDate = new Date();
 
     const updatedDesignation = await designation.save();
+
+    await logActivity(req.user._id, "Designations", "UPDATE", req.oldData, designation.toObject(), req);
 
     return res.status(200).json({
       status: 200,
@@ -342,9 +360,12 @@ const deleteDesignation = async (req, res) => {
     if (!designation) {
       return res.status(404).json({ error: "Designation not found" });
     }
+    req.oldData = designation.toObject();
 
     designation.archive = true;
     await designation.save();
+
+    await logActivity(req.user._id, "Designations", "DELETE", req.oldData, null, req);
 
     return res.status(200).json({
       message: "Designation archived successfully",

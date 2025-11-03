@@ -1,5 +1,6 @@
 // controllers/departmentController.js
 import Department from "../Models/departmentModel.js";
+import { logActivity } from "../utils/activityLogger.js";
 
 // ✅ PROFESSIONAL VALIDATION HELPERS FOR DEPARTMENTS
 const ValidationRules = {
@@ -183,6 +184,15 @@ export const createDepartment = async (req, res) => {
       isArchived: false,
     });
 
+    await logActivity(
+  req.user._id,     
+  "Departments",       
+  "CREATE",            
+  null,                 
+  department.toObject(), 
+  req                    
+);
+
     return res.status(201).json({
       status: 201,
       message: "Department created successfully",
@@ -268,6 +278,8 @@ export const updateDepartment = async (req, res) => {
       });
     }
 
+    req.oldData = department.toObject();
+
     // Update department
     const updated = await Department.findByIdAndUpdate(
       id,
@@ -278,6 +290,15 @@ export const updateDepartment = async (req, res) => {
       },
       { new: true }
     );
+
+    await logActivity(
+  req.user._id,
+  "Departments",
+  "UPDATE",
+  req.oldData,                 
+  updated.toObject(), 
+  req
+);
 
     return res.status(200).json({
       status: 200,
@@ -390,8 +411,18 @@ export const deleteDepartment = async (req, res) => {
     if (!department)
       return res.status(404).json({ error: "Department not found" });
 
+    req.oldData = department.toObject(); 
+
     department.isArchived = true;
     await department.save();
+    await logActivity(
+  req.user._id,
+  "Departments",
+  "DELETE",
+  req.oldData,   
+  null,         
+  req
+);
 
     return res.status(200).json({
       message: "Department archived successfully",

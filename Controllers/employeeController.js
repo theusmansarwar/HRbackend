@@ -1,5 +1,7 @@
 // controllers/employeeController.js
 import Employee from "../Models/employeeModel.js";
+import { logActivity } from "../utils/activityLogger.js";
+
 
 // ✅ PROFESSIONAL VALIDATION HELPERS FOR EMPLOYEES
 const ValidationRules = {
@@ -480,6 +482,15 @@ const createEmployee = async (req, res) => {
       emergencyContactName: emergencyContactName.trim(),
       emergencyContactNo: emergencyContactNo.trim(),
     });
+    await logActivity(
+  req.user._id,            
+  "Employees",            
+  "CREATE",              
+  null,               
+  employee.toObject(),    
+  req                    
+);
+
 
     return res.status(201).json({
       status: 201,
@@ -663,6 +674,8 @@ const updateEmployee = async (req, res) => {
         missingFields: [{ name: "cnic", message: "This CNIC is already registered" }],
       });
     }
+    req.oldData = employee.toObject();
+
 
     // Update employee
     employee.firstName = firstName.trim();
@@ -683,6 +696,16 @@ const updateEmployee = async (req, res) => {
     employee.emergencyContactNo = emergencyContactNo.trim();
 
     const updatedEmployee = await employee.save();
+
+    await logActivity(
+  req.user._id,
+  "Employees",
+  "UPDATE",
+  req.oldData,
+  employee.toObject(),
+  req
+);
+
 
     return res.status(200).json({
       status: 200,
@@ -795,9 +818,13 @@ const deleteEmployee = async (req, res) => {
     if (!employee) {
       return res.status(404).json({ error: "Employee not found" });
     }
+    req.oldData = employee.toObject();
+
 
     employee.isArchived = true;
     await employee.save();
+
+    await logActivity(req.user._id, "Employees", "DELETE", req.oldData, null, req);
 
     return res.status(200).json({ 
       message: "Employee archived successfully" 

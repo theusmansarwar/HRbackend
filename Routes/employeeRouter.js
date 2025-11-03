@@ -1,15 +1,17 @@
 import express from "express";
 import multer from "multer";
-import {  
+import { protect } from "../Middlewares/authMiddleware.js";
+import {
   createEmployee,
   getEmployeeList,
   updateEmployee,
   deleteEmployee,
-  getArchivedEmployees
+  getArchivedEmployees,
 } from "../Controllers/employeeController.js";
+
 const router = express.Router();
 
-
+// Multer setup for profile image upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads/");
@@ -21,24 +23,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post("/createEmployee", upload.single("profileImage"), createEmployee);
-router.get('/getEmployees', getEmployeeList);
-router.put("/updateEmployee/:id", upload.single("profileImage"), updateEmployee);
-router.delete('/deleteEmployee/:id', deleteEmployee);
-router.get('/getArchivedEmployees', getArchivedEmployees);
+// Routes with protection and upload
+router.post("/createEmployee", protect, upload.single("profileImage"), createEmployee);
+router.put("/updateEmployee/:id", protect, upload.single("profileImage"), updateEmployee);
+router.delete("/deleteEmployee/:id", protect, deleteEmployee);
+router.get("/getEmployees", protect, getEmployeeList);
+router.get("/getArchivedEmployees", protect, getArchivedEmployees);
 
 export default router;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
