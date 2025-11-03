@@ -2,19 +2,18 @@ import express from "express";
 import {
   createLeave,
   getLeaveList,
-  getLeaveById,
   updateLeave,
   deleteLeave,
-  getArchivedLeaves
+  getArchivedLeaves,
 } from "../Controllers/leaveController.js";
+import { protect } from "../Middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/createLeave", createLeave);
-router.get("/getLeaves", getLeaveList);
-router.get("/getLeave/:id", getLeaveById);
-router.put("/updateLeave/:id", updateLeave);
-router.delete("/deleteLeave/:id", deleteLeave);
-router.get("/getArchivedLeaves", getArchivedLeaves);
+router.post("/createLeave", protect, createLeave);
+router.put("/updateLeave/:id", protect, updateLeave);
+router.delete("/deleteLeave/:id", protect, deleteLeave);
+router.get("/getLeaves", protect, getLeaveList);
+router.get("/getArchivedLeaves", protect, getArchivedLeaves);
 
-  export default router;
+export default router;

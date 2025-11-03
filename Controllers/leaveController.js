@@ -1,4 +1,5 @@
 import Leave from "../Models/leaveModel.js";
+import { logActivity } from "../utils/activityLogger.js";
  
 export const createLeave = async (req, res) => {
   try {
@@ -58,6 +59,15 @@ export const createLeave = async (req, res) => {
 
     await leave.save();
 
+    await logActivity(
+      req.user._id,
+      "Leaves",
+      "CREATE",
+      null,
+      leave.toObject(),
+      req
+    );
+
     return res.status(201).json({
       status: 201,
       message: "Leave created successfully",
@@ -106,6 +116,8 @@ export const updateLeave = async (req, res) => {
       });
     }
 
+    req.oldData = leave.toObject();
+
     leave.employeeId = employeeId;
     leave.leaveType = leaveType;
     leave.startDate = new Date(startDate);
@@ -113,6 +125,15 @@ export const updateLeave = async (req, res) => {
     leave.status = status;
 
     const updatedLeave = await leave.save();
+
+    await logActivity(
+      req.user._id,
+      "Leaves",
+      "UPDATE",
+      req.oldData,
+      updatedLeave.toObject(),
+      req
+    );
 
     return res.status(200).json({
       status: 200,
@@ -138,6 +159,7 @@ export const updateLeave = async (req, res) => {
     return res.status(500).json({
       status: 500,
       message: "Server error while updating leave",
+      details: error.message,
     });
   }
 };
@@ -239,8 +261,12 @@ export const deleteLeave = async (req, res) => {
     const leave = await Leave.findById(id);
     if (!leave) return res.status(404).json({ error: "Leave not found" });
 
+req.oldData = leave.toObject();
+
     leave.archive = true;
     await leave.save();
+
+    await logActivity(req.user._id, "Leaves", "DELETE", req.oldData, null, req);
 
     return res.status(200).json({
       status: 200,

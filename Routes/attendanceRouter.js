@@ -1,18 +1,20 @@
 import express from "express";
 import {
-  createAttendance, 
+  createAttendance,
   getAttendanceList,
   getArchivedAttendances,
   updateAttendance,
-  deleteAttendance
+  deleteAttendance,
 } from "../Controllers/attendanceController.js";
+import { protect } from "../Middlewares/authMiddleware.js"; 
 
 const router = express.Router();
 
-router.post("/createAttendance", createAttendance);
-router.get("/getAttendances", getAttendanceList);
-router.get("/getArchivedAttendances", getArchivedAttendances);
-router.put("/updateAttendance/:id", updateAttendance);
-router.delete("/deleteAttendance/:id", deleteAttendance);
+router.post("/createAttendance", protect, createAttendance);
+router.put("/updateAttendance/:id", protect, updateAttendance);
+router.delete("/deleteAttendance/:id", protect, deleteAttendance);
+
+router.get("/getAttendances", protect, getAttendanceList);
+router.get("/getArchivedAttendances", protect, getArchivedAttendances);
 
 export default router;

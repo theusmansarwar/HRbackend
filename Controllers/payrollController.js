@@ -1,5 +1,5 @@
 import Payroll from "../Models/payrollModel.js";
-
+import { logActivity } from "../utils/activityLogger.js";
 
 export const createPayroll = async (req, res) => {
   try {
@@ -62,6 +62,7 @@ export const createPayroll = async (req, res) => {
         ],
       });
     }
+
     const lastPayroll = await Payroll.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     if (lastPayroll?.payrollId) {
@@ -87,6 +88,8 @@ export const createPayroll = async (req, res) => {
     });
 
     await payroll.save();
+
+    await logActivity(req.user._id, "Payroll", "CREATE", null, payroll.toObject(), req);
 
     return res.status(201).json({
       status: 201,
@@ -159,6 +162,8 @@ export const updatePayroll = async (req, res) => {
       });
     }
 
+    const oldPayroll = payroll.toObject();
+
     Object.assign(payroll, {
       employeeId,
       basicSalary,
@@ -173,11 +178,14 @@ export const updatePayroll = async (req, res) => {
       year,
       status: status || "Pending",
     });
+
     const updatedPayroll = await payroll.save();
+
+    await logActivity(req.user._id, "Payroll", "UPDATE", oldPayroll, updatedPayroll.toObject(), req);
 
     return res.status(200).json({
       status: 200,
-      message: "Payroll updated successfully ",
+      message: "Payroll updated successfully",
       data: updatedPayroll,
     });
   } catch (error) {
@@ -206,8 +214,8 @@ export const getPayrollList = async (req, res) => {
       const regex = new RegExp(search, "i");
       payrolls = payrolls.filter(
         (payroll) =>
-          regex.test(payroll.salaryMonth || "") ||
-          regex.test(String(payroll.totalSalary || "")) ||
+          regex.test(payroll.month || "") ||
+          regex.test(String(payroll.netSalary || "")) ||
           regex.test(payroll.employeeId?.firstName || "") ||
           regex.test(payroll.employeeId?.lastName || "") ||
           regex.test(payroll.employeeId?.email || "")
@@ -225,32 +233,40 @@ export const getPayrollList = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching payrolls:", error);
-    return res.status(500).json({ error: "Server Error" });
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while fetching payrolls",
+    });
   }
 };
 
 export const getArchivedPayrolls = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
 
     const archived = await Payroll.find({ isArchived: true })
-      .populate("employeeId", "firstName lastName")
-      .skip(parseInt(skip))
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+      .populate("employeeId", "firstName lastName email")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     const total = await Payroll.countDocuments({ isArchived: true });
 
     return res.status(200).json({
-      message: "Archived payrolls fetched",
+      message: "Archived payrolls fetched successfully",
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit,
       data: archived,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error fetching archived payrolls:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while fetching archived payrolls",
+    });
   }
 };
 
@@ -258,21 +274,26 @@ export const getPayrollById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const payroll = await Payroll.findById(id).populate(
-      "employeeId",
-      "firstName lastName email"
-    );
+    const payroll = await Payroll.findById(id).populate("employeeId", "firstName lastName email");
 
     if (!payroll) {
-      return res.status(404).json({ error: "Payroll not found" });
+      return res.status(404).json({
+        status: 404,
+        message: "Payroll not found",
+      });
     }
 
     return res.status(200).json({
+      status: 200,
       message: "Payroll fetched successfully",
       data: payroll,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error fetching payroll:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while fetching payroll",
+    });
   }
 };
 
@@ -281,15 +302,28 @@ export const deletePayroll = async (req, res) => {
     const { id } = req.params;
 
     const payroll = await Payroll.findById(id);
-    if (!payroll) return res.status(404).json({ message: "Payroll not found" });
+    if (!payroll) {
+      return res.status(404).json({
+        status: 404,
+        message: "Payroll not found",
+      });
+    }
 
+    const oldPayroll = payroll.toObject();
     payroll.isArchived = true;
     await payroll.save();
 
+    await logActivity(req.user._id, "Payroll", "DELETE", oldPayroll, payroll.toObject(), req);
+
     return res.status(200).json({
+      status: 200,
       message: "Payroll archived successfully",
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error deleting payroll:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while deleting payroll",
+    });
   }
 };

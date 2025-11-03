@@ -4,14 +4,18 @@ import {
   getPayrollList,
   getArchivedPayrolls,
   updatePayroll,
-  deletePayroll
+  deletePayroll,
 } from "../Controllers/payrollController.js";
+import { protect } from "../Middlewares/authMiddleware.js";  
+
 const router = express.Router();
 
-router.post("/createPayroll", createPayroll);
-router.get("/getPayrolls", getPayrollList);
-router.get("/getArchivedPayrolls", getArchivedPayrolls);
-router.put("/updatePayroll/:id", updatePayroll);
-router.delete("/deletePayroll/:id", deletePayroll);
+ 
+router.post("/createPayroll", protect, createPayroll);
+router.put("/updatePayroll/:id", protect, updatePayroll);
+router.delete("/deletePayroll/:id", protect, deletePayroll);
+
+router.get("/getPayrolls", protect, getPayrollList);
+router.get("/getArchivedPayrolls", protect, getArchivedPayrolls);
 
 export default router;

@@ -1,4 +1,5 @@
 import Job from "../Models/jobModel.js";
+import { logActivity } from "../utils/activityLogger.js"; 
 
 export const createJob = async (req, res) => {
   try {
@@ -73,6 +74,15 @@ export const createJob = async (req, res) => {
       postingDate,
       expiryDate,
     });
+
+    await logActivity(
+      req.user._id,
+      "Job",
+      "CREATE",
+      null,
+      job.toObject(),
+      req
+    );
 
     return res.status(201).json({
       status: 201,
@@ -150,6 +160,16 @@ if (!expiryDate?.trim())
       });
     }
 
+    const oldJob = await Job.findById(id);
+    if (!oldJob) {
+      return res.status(404).json({
+        status: 404,
+        message: "Job not found",
+      });
+    }
+
+    req.oldData = oldJob.toObject(); 
+
     const updatedJob = await Job.findByIdAndUpdate(
       id,
       {
@@ -173,6 +193,15 @@ if (!expiryDate?.trim())
         message: "Job not found",
       });
     }
+
+     await logActivity(
+      req.user._id,
+      "Job",
+      "UPDATE",
+      req.oldData,
+      updatedJob.toObject(),
+      req
+    );
 
     return res.status(200).json({
       status: 200,
@@ -346,6 +375,21 @@ export const deleteJob = async (req, res) => {
 
     const job = await Job.findById(id);
     if (!job) return res.status(404).json({ message: "Job not found" });
+
+    req.oldData = job.toObject();
+
+    job.isArchived = true;
+    await job.save();
+
+    // ✅ Activity Log Added
+    await logActivity(
+      req.user._id,
+      "Job",
+      "DELETE",
+      req.oldData,
+      null,
+      req
+    );
 
     job.isArchived = true;
     await job.save();

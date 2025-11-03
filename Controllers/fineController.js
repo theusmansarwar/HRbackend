@@ -1,8 +1,6 @@
-// Controllers/fineController.js
 import Fine from "../Models/fineModel.js";
 import Employee from "../Models/employeeModel.js";
 import { logActivity } from "../utils/activityLogger.js";
-
 
 export const createFine = async (req, res) => {
   try {
@@ -29,7 +27,6 @@ export const createFine = async (req, res) => {
       });
     }
 
-  
     const lastFine = await Fine.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     if (lastFine?.fineId) {
@@ -46,12 +43,21 @@ export const createFine = async (req, res) => {
       fineAmount,
       fineDate,
       description,
-      status,
+      status: status || "Unpaid",
     });
 
     await fine.save();
+    
+    // ✅ Convert Mongoose document to plain object
     console.log("User info:", req.user);
-    await logActivity(req.user._id, "Fine", "Created", null, fine);
+    await logActivity(
+      req.user._id, 
+      "Fine", 
+      "CREATE", 
+      null, 
+      fine.toObject(), // ✅ Added .toObject()
+      req
+    );
 
     return res.status(201).json({
       status: 201,
@@ -66,7 +72,7 @@ export const createFine = async (req, res) => {
     });
   }
 };
- 
+
 export const updateFine = async (req, res) => {
   try {
     const { id } = req.params;
@@ -78,7 +84,6 @@ export const updateFine = async (req, res) => {
     fineDate = fineDate?.trim();
     description = description?.trim();
     status = status?.trim();
-
 
     const missingFields = [];
 
@@ -122,7 +127,7 @@ export const updateFine = async (req, res) => {
       });
     }
 
-    req.oldData = fine.toObject();
+    req.oldData = fine.toObject(); // ✅ Already correct
 
     fine.employeeId = employeeId;
     fine.fineType = fineType;
@@ -135,8 +140,14 @@ export const updateFine = async (req, res) => {
 
     console.log("User info:", req.user);
 
-
-    await logActivity(req.user._id, "Fine", "Updated", req.oldData, updatedFine);
+    await logActivity(
+      req.user._id, 
+      "Fine", 
+      "UPDATE", 
+      req.oldData, 
+      updatedFine.toObject(), // ✅ Added .toObject()
+      req
+    );
 
     return res.status(200).json({
       status: 200,
@@ -166,6 +177,71 @@ export const updateFine = async (req, res) => {
     });
   }
 };
+
+// ... rest of your code remains the same ...
+
+export const deleteFine = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const fine = await Fine.findById(id);
+    if (!fine) {
+      return res.status(404).json({
+        status: "error",
+        message: "Fine not found",
+      });
+    }
+
+    req.oldData = fine.toObject(); // ✅ Already correct
+
+    fine.archiveFine = true;
+    await fine.save();
+ 
+    await logActivity(req.user._id, "Fine", "DELETE", req.oldData, null, req);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Fine archived successfully ✅",
+    });
+  } catch (error) {
+    console.error("Error archiving fine:", error); // ✅ Better error logging
+    return res.status(500).json({
+      status: "error",
+      message: "Server error while archiving fine",
+    });
+  }
+};
+
+export const getArchivedFines = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    const filter = { archiveFine: true };
+
+    const archived = await Fine.find(filter)
+      .populate("employeeId", "firstName lastName email")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    const total = await Fine.countDocuments(filter);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Archived fines fetched successfully ✅",
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      data: archived,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: "Server error while fetching archived fines",
+    });
+  }
+};
+
 
 export const getFineList = async (req, res) => {
   try {
@@ -256,68 +332,6 @@ export const getFineList = async (req, res) => {
       status: "error",
       message: "Server error while fetching fines",
       error: error.message,
-    });
-  }
-};
-
-export const getArchivedFines = async (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-
-    const filter = { archiveFine: true };
-
-    const archived = await Fine.find(filter)
-      .populate("employeeId", "firstName lastName email")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
-
-    const total = await Fine.countDocuments(filter);
-
-    return res.status(200).json({
-      status: "success",
-      message: "Archived fines fetched successfully ✅",
-      total,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      data: archived,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      status: "error",
-      message: "Server error while fetching archived fines",
-    });
-  }
-};
-
-
-export const deleteFine = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const fine = await Fine.findById(id);
-    if (!fine) {
-      return res.status(404).json({
-        status: "error",
-        message: "Fine not found",
-      });
-    }
-
-    req.oldData = fine.toObject();
-
-    fine.archiveFine = true;
-    await fine.save();
-
-    await logActivity(req.user._id, "Fine", "Archived", req.oldData, null);
-
-    return res.status(200).json({
-      status: "success",
-      message: "Fine archived successfully ✅",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      status: "error",
-      message: "Server error while archiving fine",
     });
   }
 };

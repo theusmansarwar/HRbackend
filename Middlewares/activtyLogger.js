@@ -1,16 +1,55 @@
 import ActivityLog from "../Models/activityModel.js";
 
-// 🔹 Core logging function
-export const createActivityLog = async (req, action, module, recordId, description, oldValues = null, newValues = null) => {
+// // 🔹 Core logging function
+// export const createActivityLog = async (req, action, module, recordId, description, oldValues = null, newValues = null) => {
+//   try {
+//     if (!req.user) return console.warn("User not attached to request");
+
+//     const log = new ActivityLog({
+//       user: {
+//         userId: req.user._id,
+//         userName: req.user.userName,
+//         userEmail: req.user.userEmail,
+//         userRole: req.user.userRole,
+//       },
+//       action,
+//       module,
+//       recordId,
+//       description,
+//       changes: { oldValues, newValues },
+//       request: {
+//         ipAddress: req.ip,
+//         userAgent: req.get("User-Agent"),
+//         method: req.method,
+//         url: req.originalUrl,
+//       },
+//     });
+
+//     await log.save();
+//   } catch (error) {
+//     console.error("Error saving activity log:", error.message);
+//   }
+// };
+
+
+export const createActivityLog = async (
+  req,
+  action,
+  module,
+  recordId,
+  description,
+  oldValues = null,
+  newValues = null
+) => {
   try {
     if (!req.user) return console.warn("User not attached to request");
 
     const log = new ActivityLog({
       user: {
         userId: req.user._id,
-        userName: req.user.userName,
-        userEmail: req.user.userEmail,
-        userRole: req.user.userRole,
+        userName: req.user.name, // ✅ changed
+        userEmail: req.user.email, // ✅ changed
+        userRole: req.user.role, // ✅ changed
       },
       action,
       module,
@@ -30,6 +69,7 @@ export const createActivityLog = async (req, action, module, recordId, descripti
     console.error("Error saving activity log:", error.message);
   }
 };
+
 
 // 🔹 Automatic middleware (detects CRUD)
 export const logActivity = (module) => {
