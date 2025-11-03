@@ -1,6 +1,8 @@
 // controllers/performanceController.js
 import Performance from "../Models/performanceModel.js";
 import Employee from "../Models/employeeModel.js";
+import { logActivity } from "../utils/activityLogger.js";
+
 
 const ValidationRules = {
   // KPIs validation: Array of strings
@@ -304,6 +306,9 @@ export const createPerformance = async (req, res) => {
       status: status.trim(),
     });
 
+    await logActivity(req.user._id, "Leaves", "CREATE", null, leave.toObject(), req);
+
+
     return res.status(201).json({
       status: 201,
       message: "Performance created successfully",
@@ -407,6 +412,8 @@ export const updatePerformance = async (req, res) => {
       }
     }
 
+    req.oldData = performance.toObject();
+
     const updatedPerformance = await Performance.findByIdAndUpdate(
       id,
       {
@@ -422,6 +429,15 @@ export const updatePerformance = async (req, res) => {
     )
       .populate("employeeId", "firstName lastName email")
       .populate("reviewerId", "firstName lastName email");
+
+      await logActivity(
+  req.user._id,
+  "Performance",
+  "UPDATE",
+  req.oldData,
+  updatedPerformance.toObject(),
+  req
+);
 
     return res.status(200).json({
       status: 200,
@@ -586,8 +602,19 @@ export const deletePerformance = async (req, res) => {
       });
     }
 
+    req.oldData = performance.toObject();
+
     performance.status = "Archived";
     await performance.save();
+
+    await logActivity(
+  req.user._id,
+  "Performance",
+  "ARCHIVE",
+  req.oldData,
+  null,
+  req
+);
 
     return res.status(200).json({
       status: 200,
