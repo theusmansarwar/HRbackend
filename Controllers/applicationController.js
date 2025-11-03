@@ -1,6 +1,7 @@
 import Application from "../Models/applicationModel.js";
 import path from "path";
 import fs from "fs";
+import { logActivity } from "../utils/activityLogger.js";
 
 const ValidationRules = {
   // Name validation: Only letters, spaces, hyphens, and apostrophes
@@ -280,6 +281,8 @@ export const createApplication = async (req, res) => {
       remarks: remarks.trim(),
     });
 
+    await logActivity(req.user._id, "Applications", "CREATE", req.oldData, newApplication.toObject(), req);
+
     return res.status(201).json({
       status: 201,
       message: "Application created successfully",
@@ -379,6 +382,7 @@ export const updateApplication = async (req, res) => {
       }
       return res.status(404).json({ error: "Application not found" });
     }
+    req.oldData = application.toObject();
 
     if (resume) {
       const fileValidation = validateFile(resume);
@@ -409,6 +413,8 @@ export const updateApplication = async (req, res) => {
     application.remarks = remarks.trim();
 
     const updatedApplication = await application.save();
+
+    await logActivity(req.user._id, "Applications", "UPDATE", req.oldData, application.toObject(), req);
 
     return res.status(200).json({
       status: 200,
@@ -535,8 +541,10 @@ export const deleteApplication = async (req, res) => {
     const application = await Application.findById(id);
     if (!application)
       return res.status(404).json({ error: "Application not found" });
+    req.oldData = application.toObject();
 
     await Application.updateOne({ _id: id }, { isArchived: true });
+  await logActivity(req.user._id, "Applications", "DELETE", req.oldData, null, req);
 
     return res.status(200).json({
       message: "Application archived successfully",
