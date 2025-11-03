@@ -3,6 +3,8 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import connectDB from "./utils/db.js";
+import path from "path"; 
+import { fileURLToPath } from "url"; 
 
 import employeeRouter from "./Routes/employeeRouter.js";
 import departmentRouter from "./Routes/departmentRouter.js";
@@ -20,6 +22,8 @@ import roleRouter from "./Routes/rolesRouter.js";
 import fineRouter from "./Routes/fineRouter.js";
 import activityRouter from "./Routes/activityRouter.js"
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 5009;
@@ -32,7 +36,7 @@ app.use(
   })
 );
 
-// Routes
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/employees", employeeRouter);
 app.use("/departments", departmentRouter);
 app.use("/designations", designationRouter);

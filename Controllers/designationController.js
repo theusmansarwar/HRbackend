@@ -1,71 +1,158 @@
+// controllers/designationController.js
 import Designation from "../Models/designationModel.js";
 
+// ✅ PROFESSIONAL VALIDATION HELPERS FOR DESIGNATIONS
+const ValidationRules = {
+  // Designation Name validation: Must start with letter
+  designationName: {
+    pattern: /^[a-zA-Z][a-zA-Z0-9\s\-&/.()]*$/,
+    minLength: 2,
+    maxLength: 100,
+    message: "Invalid format. Use letters, numbers, spaces, - & / . ( )",
+  },
+  
+  // Status validation
+  status: {
+    allowedValues: ['Active', 'Inactive'],
+    message: "Select Active or Inactive",
+  },
+};
+
+// Validate Designation Name
+const validateDesignationName = (designationName) => {
+  if (!designationName || !designationName.trim()) {
+    return { valid: false, message: "Designation Name is required" };
+  }
+  
+  const trimmedName = designationName.trim();
+  
+  if (trimmedName.length < ValidationRules.designationName.minLength) {
+    return { 
+      valid: false, 
+      message: `Minimum ${ValidationRules.designationName.minLength} characters required` 
+    };
+  }
+  
+  if (trimmedName.length > ValidationRules.designationName.maxLength) {
+    return { 
+      valid: false, 
+      message: `Maximum ${ValidationRules.designationName.maxLength} characters allowed` 
+    };
+  }
+  
+  if (!ValidationRules.designationName.pattern.test(trimmedName)) {
+    return { valid: false, message: ValidationRules.designationName.message };
+  }
+  
+  // Must contain at least one letter
+  if (!/[a-zA-Z]/.test(trimmedName)) {
+    return { valid: false, message: "Must contain at least one letter" };
+  }
+  
+  return { valid: true };
+};
+
+// Validate Department ID
+const validateDepartmentId = (departmentId) => {
+  if (!departmentId || !departmentId.trim()) {
+    return { valid: false, message: "Department selection is required" };
+  }
+  
+  return { valid: true };
+};
+
+// Validate Status
+const validateStatus = (status) => {
+  if (!status || !status.trim()) {
+    return { valid: false, message: "Status is required" };
+  }
+  
+  const trimmedStatus = status.trim();
+  
+  if (!ValidationRules.status.allowedValues.includes(trimmedStatus)) {
+    return { valid: false, message: ValidationRules.status.message };
+  }
+  
+  return { valid: true };
+};
+
+// ✅ CREATE DESIGNATION WITH PROFESSIONAL VALIDATION
 export const createDesignation = async (req, res) => {
   try {
     const { designationName, departmentId, status } = req.body;
-
-    // ✅ Collect missing fields with messages
     const missingFields = [];
-    if (!designationName)
+
+    // Validate Designation Name
+    const nameValidation = validateDesignationName(designationName);
+    if (!nameValidation.valid) {
       missingFields.push({
         name: "designationName",
-        message: "Designation Name is required",
+        message: nameValidation.message,
       });
-    if (!departmentId)
+    }
+
+    // Validate Department ID
+    const deptValidation = validateDepartmentId(departmentId);
+    if (!deptValidation.valid) {
       missingFields.push({
         name: "departmentId",
-        message: "Department selection is required",
+        message: deptValidation.message,
       });
-    if (!status)
+    }
+
+    // Validate Status
+    const statusValidation = validateStatus(status);
+    if (!statusValidation.valid) {
       missingFields.push({
         name: "status",
-        message: "Status is required",
+        message: statusValidation.message,
       });
+    }
 
+    // Return all validation errors
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: 400,
-        message: "Missing required fields",
+        message: "Validation failed. Please correct the errors.",
         missingFields,
       });
     }
 
-    // ✅ Duplicate check
+    // Check for duplicate designation in same department
     const existingDesignation = await Designation.findOne({
-      designationName,
-      departmentId,
+      designationName: { $regex: new RegExp(`^${designationName.trim()}$`, 'i') },
+      departmentId: departmentId.trim(),
       archive: false,
     });
 
     if (existingDesignation) {
       return res.status(400).json({
         status: 400,
-        message: "Duplicate entry",
+        message: "Designation already exists in this department",
         missingFields: [
           {
             name: "designationName",
-            message: "This designation already exists in the selected department",
+            message: "This designation already exists in selected department",
           },
         ],
       });
     }
 
-    // ✅ Auto-generate ID: DSG-0001
+    // Generate unique designationId
     const lastDesignation = await Designation.findOne().sort({ createdAt: -1 });
     let newIdNumber = 1;
     if (lastDesignation && lastDesignation.designationId) {
       const lastNumber = parseInt(lastDesignation.designationId.split("-")[1]);
       if (!isNaN(lastNumber)) newIdNumber = lastNumber + 1;
     }
-
     const designationId = `DSG-${newIdNumber.toString().padStart(4, "0")}`;
 
-    // ✅ Create new record
+    // Create designation
     const designation = await Designation.create({
       designationId,
-      designationName,
-      departmentId,
-      status,
+      designationName: designationName.trim(),
+      departmentId: departmentId.trim(),
+      status: status.trim(),
       archive: false,
     });
 
@@ -75,16 +162,112 @@ export const createDesignation = async (req, res) => {
       data: designation,
     });
   } catch (error) {
-    console.error("Error creating designation:", error);
+    console.error("Create Designation Error:", error);
     return res.status(500).json({
       status: 500,
-      message: "Something went wrong while creating designation",
+      message: "Server error while creating designation",
       details: error.message,
     });
   }
 };
 
+// ✅ UPDATE DESIGNATION WITH PROFESSIONAL VALIDATION
+export const updateDesignation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { designationName, departmentId, status } = req.body;
+    const missingFields = [];
 
+    // Check if designation exists
+    const designation = await Designation.findById(id);
+    if (!designation) {
+      return res.status(404).json({
+        status: 404,
+        message: "Designation not found",
+      });
+    }
+
+    // Validate Designation Name
+    const nameValidation = validateDesignationName(designationName);
+    if (!nameValidation.valid) {
+      missingFields.push({
+        name: "designationName",
+        message: nameValidation.message,
+      });
+    }
+
+    // Validate Department ID
+    const deptValidation = validateDepartmentId(departmentId);
+    if (!deptValidation.valid) {
+      missingFields.push({
+        name: "departmentId",
+        message: deptValidation.message,
+      });
+    }
+
+    // Validate Status
+    const statusValidation = validateStatus(status);
+    if (!statusValidation.valid) {
+      missingFields.push({
+        name: "status",
+        message: statusValidation.message,
+      });
+    }
+
+    // Return all validation errors
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Validation failed. Please correct the errors.",
+        missingFields,
+      });
+    }
+
+    // Check for duplicate (excluding current designation)
+    const existingDesignation = await Designation.findOne({
+      designationName: { $regex: new RegExp(`^${designationName.trim()}$`, 'i') },
+      departmentId: departmentId.trim(),
+      _id: { $ne: id },
+      archive: false,
+    });
+
+    if (existingDesignation) {
+      return res.status(400).json({
+        status: 400,
+        message: "Designation already exists in this department",
+        missingFields: [
+          {
+            name: "designationName",
+            message: "This designation already exists in selected department",
+          },
+        ],
+      });
+    }
+
+    // Update designation
+    designation.designationName = designationName.trim();
+    designation.departmentId = departmentId.trim();
+    designation.status = status.trim();
+    designation.updatedDate = new Date();
+
+    const updatedDesignation = await designation.save();
+
+    return res.status(200).json({
+      status: 200,
+      message: "Designation updated successfully",
+      data: updatedDesignation,
+    });
+  } catch (error) {
+    console.error("Update Designation Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Server error while updating designation",
+      details: error.message,
+    });
+  }
+};
+
+// ✅ OTHER FUNCTIONS (No changes needed)
 const getDesignationList = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -119,8 +302,10 @@ const getDesignationList = async (req, res) => {
       data: designations,
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Server Error" });
+    console.error("Error fetching designations:", error);
+    return res.status(500).json({ 
+      error: "Server error while fetching designations" 
+    });
   }
 };
 
@@ -138,7 +323,7 @@ const getArchivedDesignations = async (req, res) => {
     const total = await Designation.countDocuments({ archive: true });
 
     return res.status(200).json({
-      message: "Archived Designations Fetched",
+      message: "Archived designations fetched",
       total,
       page: parseInt(page),
       limit: parseInt(limit),
@@ -148,62 +333,6 @@ const getArchivedDesignations = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
-export const updateDesignation = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { designationName, departmentId, status } = req.body;
-
-    const designation = await Designation.findById(id);
-    if (!designation) {
-      return res.status(404).json({
-        status: 404,
-        message: "Designation not found",
-      });
-    }
-    const missingFields = [];
-    if (!designationName)
-      missingFields.push({
-        name: "designationName",
-        message: "Designation Name is required",
-      });
-    if (!departmentId)
-      missingFields.push({
-        name: "departmentId",
-        message: "Department selection is required",
-      });
-    if (!status)
-      missingFields.push({
-        name: "status",
-        message: "Status is required",
-      });
-
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        status: 400,
-        message: "Missing required fields",
-        missingFields,
-      });
-    }
-
-    Object.assign(designation, req.body, { updatedDate: new Date() });
-    const updatedDesignation = await designation.save();
-
-    return res.status(200).json({
-      status: 200,
-      message: "Designation updated successfully",
-      data: updatedDesignation,
-    });
-  } catch (error) {
-    console.error("Error updating designation:", error);
-    return res.status(500).json({
-      status: 500,
-      message: "Something went wrong while updating designation",
-      details: error.message,
-    });
-  }
-};
-
 
 const deleteDesignation = async (req, res) => {
   try {
@@ -226,6 +355,14 @@ const deleteDesignation = async (req, res) => {
 };
 
 export {
+  getDesignationList,
+  getArchivedDesignations,
+  deleteDesignation,
+};
+
+export default {
+  createDesignation,
+  updateDesignation,
   getDesignationList,
   getArchivedDesignations,
   deleteDesignation,

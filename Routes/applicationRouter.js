@@ -1,17 +1,21 @@
 import express from "express";
+import upload from "../Middlewares/upload.js"; 
 import {
   createApplication,
   getApplicationList,   
-    updateApplication,      
-    deleteApplication,
-    getArchivedApplications
+  updateApplication,      
+  deleteApplication,
+  getArchivedApplications,
+  downloadResume,
 } from "../Controllers/applicationController.js";
 
 const router = express.Router();
 
-router.post("/createApplication", createApplication);
+router.post("/createApplication", upload.single('resume'), createApplication);
+router.put("/updateApplication/:id", upload.single('resume'), updateApplication);
+router.get("/download/:filename", downloadResume);
+
 router.get("/getApplications", getApplicationList);
-router.put("/updateApplication/:id", updateApplication);
 router.delete("/deleteApplication/:id", deleteApplication);
 router.get("/getArchivedApplications", getArchivedApplications);
 
