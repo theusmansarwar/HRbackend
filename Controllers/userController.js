@@ -2,6 +2,8 @@ import User from "../Models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Role from "../Models/Roles.js";
+import { logActivity } from "../utils/activityLogger.js";
+
 
 // ✅ PROFESSIONAL VALIDATION HELPERS
 const ValidationRules = {
@@ -202,6 +204,16 @@ const loginUser = async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    await logActivity(
+  user._id,
+  "User",
+  "LOGIN",
+  null,
+  { email: user.email, role: user.role },
+  req
+);
+
+
     res.json({
       status: 200,
       message: "Login successful",
@@ -301,6 +313,15 @@ export const signupUser = async (req, res) => {
     });
     
     await newUser.save();
+    await logActivity(
+  req.user?._id || newUser._id,
+  "User",
+  "CREATE",
+  null,
+  newUser.toObject(),
+  req
+);
+
     
     return res.status(201).json({
       status: 201,
@@ -478,6 +499,8 @@ export const updateUser = async (req, res) => {
         });
       }
     }
+    req.oldData = user.toObject();
+
 
     user.name = nameValidation.value;
     user.email = emailValidation.value;
@@ -485,6 +508,16 @@ export const updateUser = async (req, res) => {
     user.status = statusValidation.value;
 
     const updatedUser = await user.save();
+
+    await logActivity(
+  req.user._id,
+  "User",
+  "UPDATE",
+  req.oldData,
+  updatedUser.toObject(),
+  req
+);
+
     
     return res.status(200).json({
       status: 200,
@@ -532,15 +565,20 @@ export const updateUser = async (req, res) => {
 // ✅ DELETE USER
 const deleteUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({
-        status: 404,
-        message: "User not found",
-      });
-    }
-    
+
+    const user = await User.findById(req.params.id);
+if (!user) {
+  return res.status(404).json({
+    status: 404,
+    message: "User not found",
+  });
+}
+req.oldData = user.toObject();
+await User.findByIdAndDelete(req.params.id);
+
+await logActivity(req.user._id, "User", "DELETE", req.oldData, null, req);
+     
+     
     res.json({
       status: 200,
       message: "User deleted successfully",

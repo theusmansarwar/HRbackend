@@ -1,4 +1,6 @@
 import Role from "../Models/Roles.js";
+import { logActivity } from "../utils/activityLogger.js";
+
 
 const ValidationRules = {
   // Role Name validation: Only letters, spaces, hyphens
@@ -176,6 +178,16 @@ export const createRole = async (req, res) => {
     
     await newRole.save();
 
+    await logActivity(
+  req.user._id,
+  "Roles",
+  "CREATE",
+  null,
+  newRole.toObject(),
+  req
+);
+
+
     return res.status(201).json({
       status: 201,
       message: "Role created successfully",
@@ -327,6 +339,7 @@ export const updateRole = async (req, res) => {
         message: "Role not found",
       });
     }
+    
 
     // Check if name is being changed and if it already exists
     if (nameValidation.value.toLowerCase() !== role.name.toLowerCase()) {
@@ -343,12 +356,25 @@ export const updateRole = async (req, res) => {
       }
     }
 
+    req.oldData = role.toObject();
+
+
     role.name = nameValidation.value;
     role.modules = modulesValidation.value;
     role.description = descriptionValidation.value;
     role.status = statusValidation.value;
 
     const updatedRole = await role.save();
+
+    await logActivity(
+  req.user._id,
+  "Roles",
+  "UPDATE",
+  req.oldData,
+  updatedRole.toObject(),
+  req
+);
+
 
     return res.status(200).json({
       status: 200,
@@ -388,14 +414,20 @@ export const updateRole = async (req, res) => {
 
 const deleteRole = async (req, res) => {
   try {
-    const role = await Role.findByIdAndDelete(req.params.id);
-    
+    const role = await Role.findById(req.params.id);
+
     if (!role) {
       return res.status(404).json({
         status: 404,
         message: "Role not found",
       });
     }
+
+    req.oldData = role.toObject();  
+
+    await Role.findByIdAndDelete(req.params.id);
+
+    await logActivity(req.user._id, "Roles", "DELETE", req.oldData, null, req);
 
     res.json({
       status: 200,
@@ -409,6 +441,7 @@ const deleteRole = async (req, res) => {
     });
   }
 };
+
 
 const getRoleByName = async (req, res) => {
   try {

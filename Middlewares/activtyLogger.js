@@ -82,6 +82,14 @@ export const logActivity = (module) => {
         let action, description;
         const recordId = req.params.id || data?.data?._id || data?._id;
 
+
+        if (req.originalUrl.includes("/login")) {
+          action = "LOGIN";
+          description = `User logged in`;
+        } else if (req.originalUrl.includes("/logout")) {
+          action = "LOGOUT";
+          description = `User logged out`;
+        } else {
         switch (method) {
           case "POST":
             action = "CREATE";
@@ -98,7 +106,7 @@ export const logActivity = (module) => {
             break;
           default:
             break;
-        }
+        }}
 
         await createActivityLog(
           req,

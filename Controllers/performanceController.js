@@ -306,7 +306,8 @@ export const createPerformance = async (req, res) => {
       status: status.trim(),
     });
 
-    await logActivity(req.user._id, "Leaves", "CREATE", null, leave.toObject(), req);
+     await logActivity(req.user._id, "Performance", "CREATE", null, performance.toObject(), req);
+
 
 
     return res.status(201).json({
@@ -412,7 +413,7 @@ export const updatePerformance = async (req, res) => {
       }
     }
 
-    req.oldData = performance.toObject();
+    req.oldData = performanceRecord.toObject();
 
     const updatedPerformance = await Performance.findByIdAndUpdate(
       id,
@@ -610,7 +611,7 @@ export const deletePerformance = async (req, res) => {
     await logActivity(
   req.user._id,
   "Performance",
-  "ARCHIVE",
+  "DELETE",
   req.oldData,
   null,
   req
