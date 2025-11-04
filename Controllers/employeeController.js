@@ -2,8 +2,6 @@
 import Employee from "../Models/employeeModel.js";
 import { logActivity } from "../utils/activityLogger.js";
 
-
-// ✅ PROFESSIONAL VALIDATION HELPERS FOR EMPLOYEES
 const ValidationRules = {
   // Name validation: Only letters, spaces, hyphens, apostrophes
   name: {
@@ -296,7 +294,6 @@ const validateId = (id, fieldName) => {
   return { valid: true };
 };
 
-// ✅ CREATE EMPLOYEE WITH PROFESSIONAL VALIDATION
 const createEmployee = async (req, res) => {
   try {
     const {
@@ -507,7 +504,6 @@ const createEmployee = async (req, res) => {
   }
 };
 
-// ✅ UPDATE EMPLOYEE WITH PROFESSIONAL VALIDATION
 const updateEmployee = async (req, res) => {
   try {
     const { id } = req.params;
@@ -722,7 +718,6 @@ const updateEmployee = async (req, res) => {
   }
 };
 
-// ✅ OTHER FUNCTIONS (No changes needed)
 const getEmployeeList = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);

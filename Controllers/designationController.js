@@ -2,8 +2,6 @@
 import Designation from "../Models/designationModel.js";
 import { logActivity } from "../utils/activityLogger.js";
 
-
-// ✅ PROFESSIONAL VALIDATION HELPERS FOR DESIGNATIONS
 const ValidationRules = {
   // Designation Name validation: Must start with letter
   designationName: {

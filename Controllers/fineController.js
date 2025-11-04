@@ -48,14 +48,13 @@ export const createFine = async (req, res) => {
 
     await fine.save();
     
-    // ✅ Convert Mongoose document to plain object
     console.log("User info:", req.user);
     await logActivity(
       req.user._id, 
       "Fine", 
       "CREATE", 
       null, 
-      fine.toObject(), // ✅ Added .toObject()
+      fine.toObject(), 
       req
     );
 
@@ -127,8 +126,7 @@ export const updateFine = async (req, res) => {
       });
     }
 
-    req.oldData = fine.toObject(); // ✅ Already correct
-
+    req.oldData = fine.toObject();
     fine.employeeId = employeeId;
     fine.fineType = fineType;
     fine.fineAmount = Number(fineAmount);
@@ -145,7 +143,7 @@ export const updateFine = async (req, res) => {
       "Fine", 
       "UPDATE", 
       req.oldData, 
-      updatedFine.toObject(), // ✅ Added .toObject()
+      updatedFine.toObject(),
       req
     );
 
@@ -178,8 +176,6 @@ export const updateFine = async (req, res) => {
   }
 };
 
-// ... rest of your code remains the same ...
-
 export const deleteFine = async (req, res) => {
   try {
     const { id } = req.params;
@@ -192,7 +188,7 @@ export const deleteFine = async (req, res) => {
       });
     }
 
-    req.oldData = fine.toObject(); // ✅ Already correct
+    req.oldData = fine.toObject();
 
     fine.archiveFine = true;
     await fine.save();
@@ -201,10 +197,10 @@ export const deleteFine = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      message: "Fine archived successfully ✅",
+      message: "Fine archived successfully",
     });
   } catch (error) {
-    console.error("Error archiving fine:", error); // ✅ Better error logging
+    console.error("Error archiving fine:", error);
     return res.status(500).json({
       status: "error",
       message: "Server error while archiving fine",
@@ -228,7 +224,7 @@ export const getArchivedFines = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      message: "Archived fines fetched successfully ✅",
+      message: "Archived fines fetched successfully",
       total,
       page: parseInt(page),
       limit: parseInt(limit),

@@ -2,7 +2,6 @@
 import Department from "../Models/departmentModel.js";
 import { logActivity } from "../utils/activityLogger.js";
 
-// ✅ PROFESSIONAL VALIDATION HELPERS FOR DEPARTMENTS
 const ValidationRules = {
   // Department Name validation: Must start with letter, can contain letters, numbers, spaces, hyphens, ampersands
   departmentName: {
@@ -105,7 +104,6 @@ const validateStatus = (status) => {
   return { valid: true };
 };
 
-// ✅ CREATE DEPARTMENT WITH PROFESSIONAL VALIDATION
 export const createDepartment = async (req, res) => {
   try {
     const { departmentName, headOfDepartment, status } = req.body;
@@ -315,7 +313,6 @@ export const updateDepartment = async (req, res) => {
   }
 };
 
-// ✅ OTHER FUNCTIONS (No changes needed, just kept for completeness)
 export const getDepartmentList = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);

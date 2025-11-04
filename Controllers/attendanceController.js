@@ -2,7 +2,6 @@ import Attendance from "../Models/attendanceModel.js";
 import Employee from "../Models/employeeModel.js";
 import { logActivity } from "../utils/activityLogger.js";
 
-// ✅ PROFESSIONAL VALIDATION HELPERS
 const ValidationRules = {
   // Status validation
   status: {
@@ -146,9 +145,6 @@ const validateEmployeeId = async (employeeId) => {
   return { valid: true, value: employeeId.trim() };
 };
 
-// =============================
-// CREATE ATTENDANCE WITH VALIDATION
-// =============================
 export const createAttendance = async (req, res) => {
   try {
     const { employeeId, status, checkInTime, checkOutTime, shiftName, overtimeHours } = req.body;
@@ -252,9 +248,6 @@ export const createAttendance = async (req, res) => {
   }
 };
 
-// =============================
-// UPDATE ATTENDANCE WITH VALIDATION
-// =============================
 export const updateAttendance = async (req, res) => {
   try {
     const { id } = req.params;
@@ -371,9 +364,6 @@ export const updateAttendance = async (req, res) => {
   }
 };
 
-// =============================
-// GET ACTIVE ATTENDANCE LIST
-// =============================
 export const getAttendanceList = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -430,9 +420,6 @@ export const getAttendanceList = async (req, res) => {
   }
 };
 
-// =============================
-// GET ARCHIVED ATTENDANCE
-// =============================
 export const getArchivedAttendances = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -465,9 +452,6 @@ export const getArchivedAttendances = async (req, res) => {
   }
 };
 
-// =============================
-// GET ATTENDANCE BY ID
-// =============================
 export const getAttendanceById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -494,9 +478,6 @@ export const getAttendanceById = async (req, res) => {
   }
 };
 
-// =============================
-// DELETE (ARCHIVE) ATTENDANCE
-// =============================
 export const deleteAttendance = async (req, res) => {
   try {
     const { id } = req.params;

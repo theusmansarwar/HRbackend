@@ -464,88 +464,45 @@ export const getPerformanceList = async (req, res) => {
 
     const baseFilter = { status: { $ne: "Archived" } };
 
-    let pipeline = [
-      { $match: baseFilter },
-      {
-        $lookup: {
-          from: "employees",
-          localField: "employeeId",
-          foreignField: "_id",
-          as: "employeeInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "employees",
-          localField: "reviewerId",
-          foreignField: "_id",
-          as: "reviewerInfo",
-        },
-      },
-      { $unwind: { path: "$employeeInfo", preserveNullAndEmptyArrays: true } },
-      { $unwind: { path: "$reviewerInfo", preserveNullAndEmptyArrays: true } },
-    ];
+    let query = Performance.find(baseFilter)
+      .populate({
+        path: "employeeId",
+        select: "firstName lastName email employeeId",
+      })
+      .populate({
+        path: "reviewerId",
+        select: "firstName lastName email",
+      });
 
     if (search) {
       const regex = new RegExp(search, "i");
-      pipeline.push({
-        $match: {
-          $or: [
-            { performanceId: regex },
-            { remarks: regex },
-            { status: regex },
-            { KPIs: regex },
-            { "employeeInfo.firstName": regex },
-            { "employeeInfo.lastName": regex },
-            { "employeeInfo.email": regex },
-            { "employeeInfo.employeeId": regex },
-            { "reviewerInfo.firstName": regex },
-            { "reviewerInfo.lastName": regex },
-            { "reviewerInfo.email": regex },
-            { $expr: { $regexMatch: { input: { $toString: "$score" }, regex: search, options: "i" } } },
-          ],
-        },
+      query = query.find({
+        $or: [
+          { performanceId: regex },
+          { remarks: regex },
+          { status: regex },
+          { KPIs: regex },
+          { "employeeId.firstName": regex },
+          { "employeeId.lastName": regex },
+          { "employeeId.email": regex },
+          { "employeeId.employeeId": regex },
+          { "reviewerId.firstName": regex },
+          { "reviewerId.lastName": regex },
+          { "reviewerId.email": regex },
+          { $expr: { $regexMatch: { input: { $toString: "$score" }, regex: search, options: "i" } } },
+        ],
       });
     }
 
-    const countPipeline = [...pipeline, { $count: "total" }];
-    const countResult = await Performance.aggregate(countPipeline);
-    const total = countResult.length > 0 ? countResult[0].total : 0;
+    const total = await Performance.countDocuments(query.getQuery());
 
-    pipeline.push(
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limit }
-    );
-
-    pipeline.push({
-      $project: {
-        _id: 1,
-        performanceId: 1,
-        KPIs: 1,
-        appraisalDate: 1,
-        score: 1,
-        remarks: 1,
-        status: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        employeeId: {
-          _id: "$employeeInfo._id",
-          firstName: "$employeeInfo.firstName",
-          lastName: "$employeeInfo.lastName",
-          email: "$employeeInfo.email",
-          employeeId: "$employeeInfo.employeeId",
-        },
-        reviewerId: {
-          _id: "$reviewerInfo._id",
-          firstName: "$reviewerInfo.firstName",
-          lastName: "$reviewerInfo.lastName",
-          email: "$reviewerInfo.email",
-        },
-      },
-    });
-
-    const performanceList = await Performance.aggregate(pipeline);
+    const performanceList = await query
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .select(
+        "performanceId KPIs appraisalDate score remarks status createdAt updatedAt employeeId reviewerId"
+      );
 
     return res.status(200).json({
       message: "Active performance records fetched successfully",

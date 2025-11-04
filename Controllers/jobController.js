@@ -153,10 +153,6 @@ const validateObjectId = (id, fieldName = "ID") => {
   return { valid: true };
 };
 
-// ===========================
-// CONTROLLER FUNCTIONS
-// ===========================
-
 export const createJob = async (req, res) => {
   try {
     const {
@@ -459,85 +455,40 @@ export const getJobList = async (req, res) => {
 
     const baseFilter = { isArchived: false };
 
-    let pipeline = [
-      { $match: baseFilter },
-      {
-        $lookup: {
-          from: "departments",
-          localField: "departmentId",
-          foreignField: "_id",
-          as: "departmentInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "designations",
-          localField: "designationId",
-          foreignField: "_id",
-          as: "designationInfo",
-        },
-      },
-      {
-        $unwind: { path: "$departmentInfo", preserveNullAndEmptyArrays: true },
-      },
-      {
-        $unwind: { path: "$designationInfo", preserveNullAndEmptyArrays: true },
-      },
-    ];
+    let query = Job.find(baseFilter)
+      .populate({
+        path: "departmentId",
+        select: "departmentName departmentCode",
+      })
+      .populate({
+        path: "designationId",
+        select: "designationName",
+      });
 
     if (search) {
       const regex = new RegExp(search, "i");
-      pipeline.push({
-        $match: {
-          $or: [
-            { jobTitle: regex },
-            { jobDescription: regex },
-            { status: regex },
-            { jobId: regex },
-            { "departmentInfo.departmentName": regex },
-            { "departmentInfo.departmentCode": regex },
-            { "designationInfo.designationName": regex },
-          ],
-        },
+      query = query.find({
+        $or: [
+          { jobTitle: regex },
+          { jobDescription: regex },
+          { status: regex },
+          { jobId: regex },
+          { "departmentId.departmentName": regex },
+          { "departmentId.departmentCode": regex },
+          { "designationId.designationName": regex },
+        ],
       });
     }
 
-    const countPipeline = [...pipeline, { $count: "total" }];
-    const countResult = await Job.aggregate(countPipeline);
-    const total = countResult.length > 0 ? countResult[0].total : 0;
+    const total = await Job.countDocuments(query.getQuery());
 
-    pipeline.push(
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limit }
-    );
-
-    pipeline.push({
-      $project: {
-        _id: 1,
-        jobId: 1,
-        jobTitle: 1,
-        jobDescription: 1,
-        status: 1,
-        postingDate: 1,
-        expiryDate: 1,
-        isArchived: 1,
-        applicationsCount: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        departmentId: {
-          _id: "$departmentInfo._id",
-          departmentName: "$departmentInfo.departmentName",
-          departmentCode: "$departmentInfo.departmentCode",
-        },
-        designationId: {
-          _id: "$designationInfo._id",
-          designationName: "$designationInfo.designationName",
-        },
-      },
-    });
-
-    const jobs = await Job.aggregate(pipeline);
+    const jobs = await query
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .select(
+        "jobId jobTitle jobDescription status postingDate expiryDate isArchived applicationsCount createdAt updatedAt departmentId designationId"
+      );
 
     return res.status(200).json({
       message: "Active job list fetched successfully",
