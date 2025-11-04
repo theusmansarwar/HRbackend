@@ -21,6 +21,7 @@ import userRouter from "./Routes/userRouter.js";
 import roleRouter from "./Routes/rolesRouter.js";
 import fineRouter from "./Routes/fineRouter.js";
 import activityRouter from "./Routes/activityRouter.js"
+import archiveRouter from "./Routes/archiveRouter.js"
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +53,7 @@ app.use("/users", userRouter);
 app.use("/roles", roleRouter);
 app.use("/fines", fineRouter);
 app.use("/activities",activityRouter)
+app.use("/archives",archiveRouter)
 
 connectDB().then(() => {
   app.listen(port, () => {
