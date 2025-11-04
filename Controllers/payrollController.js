@@ -213,6 +213,7 @@ export const getPayrollList = async (req, res) => {
     if (search) {
       const regex = new RegExp(search, "i");
       payrolls = payrolls.filter(
+        
         (payroll) =>
           regex.test(payroll.month || "") ||
           regex.test(String(payroll.netSalary || "")) ||

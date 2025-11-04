@@ -37,9 +37,7 @@ const applicationSchema = new mongoose.Schema(
     },
     applicationStatus: {
       type: String,
-      enum: ["Pending", "Shortlisted", "Rejected", "Hired"],
       required: true,
-      default: "Pending",
     },
     interviewDate: {
       type: Date,
