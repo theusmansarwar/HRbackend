@@ -13,7 +13,6 @@ export class ArchiveService {
       const model = mongoose.model(modelName);
       const schemaObj = model.schema.obj;
 
-      // Check if model has isArchived field
       if (schemaObj.isArchived !== undefined) {
         archivableModels.push({
           name: modelName,
